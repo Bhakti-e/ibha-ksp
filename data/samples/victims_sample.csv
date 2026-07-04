@@ -1,0 +1,15 @@
+# Stub sample data – replace with official KSP Datathon 2026 dataset
+# This file matches the official Victim table schema from Police-FIR-ER-Diagram.pdf
+# GenderID: lookup value (not text)
+# VictimPolice: "1" if victim is police, "0" otherwise
+VictimMasterID,CaseMasterID,VictimName,AgeYear,GenderID,VictimPolice
+1,1,Sunita Rao,45,2,0
+2,2,Mohan Kumar,38,1,0
+3,3,Anand Swamy,52,1,0
+4,4,Lakshmi Devi,55,2,0
+5,5,Rajesh Patel,42,1,0
+6,6,Preethi Nair,28,2,0
+7,7,Suresh Electronics,,,0
+8,8,Manjunath Gowda,62,1,0
+9,10,Nagaraj Auto Services,,,0
+10,9,Multiple Victims,,,0

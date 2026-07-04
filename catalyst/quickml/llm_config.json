@@ -1,0 +1,123 @@
+{
+  "llm_configuration": {
+    "name": "Ibha Conversational AI LLM Setup",
+    "description": "Language model configuration for answer generation and tool calling",
+    "version": "0.1.0",
+    
+    "primary_model": {
+      "name": "Qwen 2.5 14B Instruct",
+      "provider": "Catalyst QuickML",
+      "purpose": "Main answer generation",
+      "parameters": {
+        "temperature": 0.2,
+        "max_tokens": 1024,
+        "top_p": 0.9,
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "note": "Low temperature for factual, consistent answers"
+      }
+    },
+    
+    "tool_calling_model": {
+      "name": "Qwen 2.5 7B Coder",
+      "provider": "Catalyst QuickML",
+      "purpose": "Agentic workflows and structured data extraction",
+      "parameters": {
+        "temperature": 0.1,
+        "max_tokens": 512,
+        "note": "Even lower temperature for precise tool calling"
+      }
+    },
+    
+    "system_prompt_template": {
+      "base_role": "You are Ibha, an intelligent AI assistant for Karnataka State Police. You help officers query crime records, identify patterns, and extract insights from the State Crime Records Bureau (SCRB) database. Always provide accurate, evidence-based answers with proper citations.",
+      
+      "rules": [
+        "ONLY use information from the retrieved context. Do not hallucinate or make up information.",
+        "ALWAYS cite sources using FIR numbers or document IDs.",
+        "If the context does not contain enough information to answer, say 'I do not have sufficient information in the database to answer this question.'",
+        "Be concise and professional. Officers need quick, actionable information.",
+        "Respect data sensitivity. If asked about RESTRICTED or CONFIDENTIAL cases, verify user clearance.",
+        "When discussing patterns or networks, provide specific evidence (FIR numbers, dates, locations).",
+        "For Kannada queries, respond in Kannada. For English queries, respond in English.",
+        "If a query is ambiguous, ask clarifying questions.",
+        "Never reveal personal information (PII) beyond what is necessary for investigation.",
+        "Always include an explanation of your reasoning process."
+      ],
+      
+      "context_template": "# Retrieved Context\n\nThe following information was retrieved from the SCRB database based on your query:\n\n{retrieved_chunks}\n\n# Metadata Filters Applied\n- Station: {station_filter}\n- District: {district_filter}\n- Time Range: {time_range}\n- Crime Type: {crime_type_filter}\n\n# Your Task\n\nBased on the above context, answer the user's query. Provide citations for each claim.",
+      
+      "output_format": {
+        "answer": "Clear, concise answer with citations",
+        "explanation_contract": {
+          "reasoning_sketch": ["Step 1: Describe what you did", "Step 2: ...", "Step N: Final answer"],
+          "tool_trail": ["RAG", "LLM", "..."],
+          "guardrails": ["RLS applied", "PII masked", "..."],
+          "confidence": "0.0 to 1.0"
+        }
+      }
+    },
+    
+    "multilingual": {
+      "supported_languages": ["en", "kn"],
+      "translation_service": "Zia AI Translation",
+      "approach": "Translate query to English for RAG, then translate answer back to Kannada if needed",
+      "code_mixing_support": true,
+      "note": "Kannada users often code-mix (Kannada + English). The system should handle this gracefully."
+    },
+    
+    "voice_integration": {
+      "stt_service": "Zia Speech-to-Text",
+      "tts_service": "Zia Text-to-Speech",
+      "languages": ["en-IN", "kn-IN"],
+      "note": "Voice mode uses Zia STT/TTS for hands-free operation"
+    },
+    
+    "guardrails": {
+      "content_safety": {
+        "enabled": true,
+        "check_input": true,
+        "check_output": true,
+        "block_topics": ["personal attacks", "political bias", "harmful instructions"]
+      },
+      "pii_protection": {
+        "enabled": true,
+        "mask_output": true,
+        "mask_strategy": "partial",
+        "exceptions": ["case investigation context"]
+      },
+      "hallucination_detection": {
+        "enabled": true,
+        "citation_requirement": true,
+        "confidence_threshold": 0.7,
+        "note": "Answers below confidence threshold should warn the user"
+      }
+    },
+    
+    "fallback_strategies": [
+      {
+        "condition": "No relevant documents retrieved",
+        "response": "I could not find relevant information in the database for your query. Please try rephrasing or contact SCRB for manual investigation."
+      },
+      {
+        "condition": "Low confidence (< 0.7)",
+        "response": "I have low confidence in this answer. Please verify with manual investigation. [Answer with confidence score]"
+      },
+      {
+        "condition": "RLS violation (user tries to access out-of-scope data)",
+        "response": "You do not have permission to access this information. Your access is limited to {station_name} / {district_name}."
+      }
+    ]
+  },
+  
+  "TODO": [
+    "Integrate Qwen models via QuickML API",
+    "Implement system prompt injection with runtime variables",
+    "Add Zia Translation for Kannada support",
+    "Add Zia STT/TTS for voice mode",
+    "Test multilingual code-mixing scenarios",
+    "Implement confidence scoring logic",
+    "Add hallucination detection heuristics",
+    "Test guardrails with adversarial queries"
+  ]
+}

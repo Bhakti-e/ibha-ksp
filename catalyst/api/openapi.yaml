@@ -1,0 +1,460 @@
+openapi: 3.0.0
+
+info:
+  title: Ibha API – KSP Crime Intelligence
+  description: |
+    Secure conversational AI API for Karnataka State Police.
+    
+    This API provides:
+    - Multilingual conversational AI (English + Kannada)
+    - Secure access to crime data with RBAC/RLS
+    - Controlled knowledge ingestion with human review
+    - Full audit trail for compliance
+    
+    **Security**: All endpoints (except /health) require OAuth 2.0 Bearer token.
+    **Rate Limiting**: 60 requests/minute per user.
+  version: 0.1.0
+  contact:
+    name: Karnataka State Police - SCRB
+    email: scrb@ksp.gov.in
+
+servers:
+  - url: https://api.ibha.catalyst.zoho.com/v1
+    description: Production API (Catalyst)
+  - url: http://localhost:3000/api/v1
+    description: Local development
+
+# Security schemes
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: OAuth 2.0 authentication via Catalyst Auth
+      flows:
+        authorizationCode:
+          authorizationUrl: https://accounts.zoho.com/oauth/v2/auth
+          tokenUrl: https://accounts.zoho.com/oauth/v2/token
+          scopes:
+            read: Read access to crime data
+            write: Write access for ingestion
+            admin: Administrative access
+  
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: User query in natural language
+          minLength: 1
+          maxLength: 2000
+        mode:
+          type: string
+          enum: [text, voice]
+          default: text
+          description: Interaction mode
+        language:
+          type: string
+          enum: [en, kn]
+          default: en
+          description: Query language (English or Kannada)
+    
+    ChatResponse:
+      type: object
+      properties:
+        answer:
+          type: string
+          description: AI-generated answer
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+        explanation_contract:
+          $ref: '#/components/schemas/ExplanationContract'
+    
+    Citation:
+      type: object
+      properties:
+        chunk_id:
+          type: string
+          description: Unique identifier for the source chunk
+        source:
+          type: string
+          description: Source document (FIR number, case ID, etc.)
+        text:
+          type: string
+          description: Relevant text excerpt
+        metadata:
+          type: object
+          description: Additional metadata (station, date, etc.)
+    
+    ExplanationContract:
+      type: object
+      description: Explainability and audit information
+      properties:
+        reasoning_sketch:
+          type: array
+          items:
+            type: string
+          description: Step-by-step reasoning process
+        tool_trail:
+          type: array
+          items:
+            type: string
+          description: Tools and models used
+        guardrails:
+          type: array
+          items:
+            type: string
+          description: Security and safety guardrails applied
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Answer confidence score
+    
+    AuditRequest:
+      type: object
+      required:
+        - user_id
+        - query
+        - answer_hash
+      properties:
+        user_id:
+          type: string
+        query:
+          type: string
+        answer_hash:
+          type: string
+          description: SHA-256 hash of the answer
+        tool_trail:
+          type: array
+          items:
+            type: string
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+    
+    DocumentUploadRequest:
+      type: object
+      required:
+        - metadata
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Document file (PDF, DOCX, TXT, images)
+        metadata:
+          type: object
+          required:
+            - station_id
+            - district_id
+            - uploaded_by
+          properties:
+            fir_number:
+              type: string
+            station_id:
+              type: string
+            district_id:
+              type: string
+            sensitivity:
+              type: string
+              enum: [NORMAL, CONFIDENTIAL, RESTRICTED]
+              default: NORMAL
+            uploaded_by:
+              type: string
+              description: User ID of uploader
+    
+    DocumentReviewRequest:
+      type: object
+      required:
+        - document_id
+        - reviewed_by
+      properties:
+        document_id:
+          type: string
+        reviewed_by:
+          type: string
+        notes:
+          type: string
+          description: Review notes (required for rejection)
+    
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+# API Endpoints
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: |
+        Public endpoint for monitoring and uptime checks.
+        No authentication required.
+      tags:
+        - Monitoring
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: Ibha - KSP Crime Intelligence
+                  version:
+                    type: string
+                    example: 0.1.0
+                  timestamp:
+                    type: string
+                    format: date-time
+  
+  /chat:
+    post:
+      summary: Conversational AI Query
+      description: |
+        Submit a query to the Ibha AI chatbot.
+        
+        **Security**: Requires OAuth token. Responses are filtered based on user role and station (RLS).
+        **Rate Limit**: 60 requests/minute per user.
+      tags:
+        - Chat
+      security:
+        - oauth2: [read]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '429':
+          description: Rate limit exceeded
+        '500':
+          description: Internal server error
+  
+  /audit:
+    post:
+      summary: Log Audit Record
+      description: |
+        Log chat interaction for compliance and audit trail.
+        
+        **Security**: Requires OAuth token.
+      tags:
+        - Audit
+      security:
+        - oauth2: [write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuditRequest'
+      responses:
+        '200':
+          description: Audit record logged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: logged
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+  
+  /ingest/upload:
+    post:
+      summary: Upload Document for Review
+      description: |
+        Upload a new document (FIR, case file, etc.) for review and eventual indexing.
+        
+        **Security**: Requires OAuth token. Only SCRB_Analyst and Admin roles can upload.
+        **Process**: Upload → Validation → OCR (if needed) → Human Review → Batch Indexing
+      tags:
+        - Knowledge Ingestion
+      security:
+        - oauth2: [write]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentUploadRequest'
+      responses:
+        '200':
+          description: Document uploaded and queued for review
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: pending_review
+                  document_id:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: Invalid file or metadata
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (insufficient role)
+  
+  /ingest/approve:
+    post:
+      summary: Approve Document for Indexing
+      description: |
+        Approve a pending document for batch indexing into RAG.
+        
+        **Security**: Requires OAuth token. Only SCRB_Analyst and Admin roles can approve.
+      tags:
+        - Knowledge Ingestion
+      security:
+        - oauth2: [write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentReviewRequest'
+      responses:
+        '200':
+          description: Document approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: approved
+                  document_id:
+                    type: string
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /ingest/reject:
+    post:
+      summary: Reject Document
+      description: |
+        Reject a pending document, preventing it from being indexed.
+        
+        **Security**: Requires OAuth token. Only SCRB_Analyst and Admin roles can reject.
+      tags:
+        - Knowledge Ingestion
+      security:
+        - oauth2: [write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentReviewRequest'
+      responses:
+        '200':
+          description: Document rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: rejected
+                  document_id:
+                    type: string
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /ingest/pending:
+    get:
+      summary: List Pending Documents
+      description: |
+        Get list of documents pending review.
+        
+        **Security**: Requires OAuth token. Only SCRB_Analyst and Admin roles can access.
+      tags:
+        - Knowledge Ingestion
+      security:
+        - oauth2: [read]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of pending documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documents:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+tags:
+  - name: Monitoring
+    description: Health checks and status
+  - name: Chat
+    description: Conversational AI endpoints
+  - name: Audit
+    description: Audit logging
+  - name: Knowledge Ingestion
+    description: Controlled document upload and review

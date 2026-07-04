@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Next.js Build Artifacts
+.next/
+out/
+
+# Environment Variables (NEVER commit these)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# DO commit .env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+*.test.js.snap
+
+# Catalyst Runtime
+.catalyst/
+catalyst_config.json
+
+# Official Dataset (sensitive/large data ONLY)
+# The /data/official/ folder should contain the official KSP ERD PDF
+# and any large datasets provided by organizers. These must NOT be committed.
+/data/official/*
+# Keep the folder structure
+!/data/official/.gitkeep
+
+# Large binaries and archives
+*.zip
+*.tar.gz
+
+# Temporary files
+.cache/
+.temp/
+tmp/

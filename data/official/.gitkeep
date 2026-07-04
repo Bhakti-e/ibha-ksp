@@ -1,0 +1,3 @@
+# This folder stores the official KSP ERD PDF and large datasets
+# These files are excluded from Git (.gitignore) for security and size reasons
+# Place official files here locally after downloading from KSP Datathon organizers

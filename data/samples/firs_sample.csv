@@ -1,0 +1,13 @@
+# Stub sample data – replace with official KSP Datathon 2026 dataset
+# This file contains synthetic FIR records for testing the Ibha scaffold
+fir_id,fir_number,station_id,district_id,date_time,location_geo_lat,location_geo_lon,crime_type,crime_category,modus_operandi,description,sensitivity,status
+FIR_001,FIR/2025/KRMGL/0042,STN_KORAMANGALA,DIST_BANGALORE_SOUTH,2025-11-10 19:30:00,12.9352,77.6245,Theft,IPC,Breaking and Entering,Theft reported at residential apartment. Gold jewelry worth Rs. 2 lakhs stolen.,NORMAL,UNDER_INVESTIGATION
+FIR_002,FIR/2025/KRMGL/0038,STN_KORAMANGALA,DIST_BANGALORE_SOUTH,2025-10-28 14:15:00,12.9343,77.6247,Vehicle Theft,IPC,Two-wheeler theft,Honda Activa (KA-01-AB-1234) stolen from parking lot.,NORMAL,UNDER_INVESTIGATION
+FIR_003,FIR/2025/KRMGL/0051,STN_KORAMANGALA,DIST_BANGALORE_SOUTH,2025-11-22 11:00:00,12.9333,77.6162,Cheating,IPC,Online fraud,Victim received phishing call claiming to be from bank.,CONFIDENTIAL,REGISTERED
+FIR_004,FIR/2025/WHTFD/0012,STN_WHITEFIELD,DIST_BANGALORE_EAST,2025-11-15 08:45:00,12.9698,77.7499,Robbery,IPC,Street robbery,Two suspects on bike snatched gold chain from pedestrian.,NORMAL,UNDER_INVESTIGATION
+FIR_005,FIR/2025/WHTFD/0018,STN_WHITEFIELD,DIST_BANGALORE_EAST,2025-11-20 21:00:00,12.9850,77.7260,Assault,IPC,Physical assault,Assault case after road rage incident.,NORMAL,CHARGE_SHEETED
+FIR_006,FIR/2025/KRMGL/0055,STN_KORAMANGALA,DIST_BANGALORE_SOUTH,2025-12-01 16:30:00,12.9342,77.6099,Theft,IPC,Pickpocketing,Mobile phone stolen from victim's pocket in crowded area.,NORMAL,REGISTERED
+FIR_007,FIR/2025/KRMGL/0058,STN_KORAMANGALA,DIST_BANGALORE_SOUTH,2025-12-05 10:00:00,12.9279,77.6270,Burglary,IPC,Shop burglary,Electronics shop burgled during night. Similar MO to FIR/2025/KRMGL/0042.,NORMAL,UNDER_INVESTIGATION
+FIR_008,FIR/2025/WHTFD/0022,STN_WHITEFIELD,DIST_BANGALORE_EAST,2025-12-08 13:20:00,12.9345,77.7500,Hit and Run,IPC,Vehicle accident,Pedestrian hit by speeding car. Victim in critical condition.,CONFIDENTIAL,UNDER_INVESTIGATION
+FIR_009,FIR/2025/KRMGL/0061,STN_KORAMANGALA,DIST_BANGALORE_SOUTH,2025-12-10 09:15:00,12.9355,77.6175,Cyber Crime,IT Act,Social media fraud,Fake investment scheme advertised on social media.,RESTRICTED,REGISTERED
+FIR_010,FIR/2025/WHTFD/0025,STN_WHITEFIELD,DIST_BANGALORE_EAST,2025-12-12 18:00:00,12.9592,77.7010,Theft,IPC,Auto-rickshaw theft,Auto-rickshaw stolen from stand. Owner received ransom call.,NORMAL,UNDER_INVESTIGATION
