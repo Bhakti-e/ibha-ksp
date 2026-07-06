@@ -34,7 +34,7 @@ Ibha is being developed for the **KSP Datathon 2026 (Challenge 1)** hosted on Ha
 - **Generate predictions** for proactive crime prevention
 - **Export reports** with full audit trails
 
-**Dataset**: The solution is designed to work with the **official KSP Datathon 2026 dataset** (FIRs, accused, victims, locations, etc.). The dataset schema is documented in `/data/erd/ksp_erd_official.md` and sample data is in `/data/samples/`.
+**Dataset**: The solution is designed to work with the **KSP Datathon 2026 dataset** (FIRs, accused, victims, locations, etc.). The dataset schema is documented in `/ksp_erd_official.md` and sample data is in `/samples/`.
 
 ---
 
@@ -528,7 +528,7 @@ This project is developed for the KSP Datathon 2026 and is intended for official
 ## 📞 Contact
 
 - **Team**: Ibha Development Team
-- **Email**: scrb@ksp.gov.in
+- **Email**: naturegirlbsp@gmail.com
 - **Datathon**: [Hack2Skill - KSP Datathon 2026](https://hack2skill.com)
 
 ---
