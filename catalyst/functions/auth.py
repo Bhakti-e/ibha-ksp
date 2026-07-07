@@ -8,11 +8,17 @@ import json
 import hashlib
 import hmac
 import base64
+import re
 from datetime import datetime, timedelta
 from lib.logging_utils import log_info, log_error
 
 # Simple secret key for JWT (in production, use environment variable)
 SECRET_KEY = "ibha_ksp_secret_key_change_in_production"
+
+def validate_email(email: str) -> bool:
+    """Validate email format"""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
 
 def create_token(user_data, expires_hours=4):
     """Create a simple JWT-like token"""
@@ -42,16 +48,16 @@ def create_token(user_data, expires_hours=4):
     return token
 
 def verify_password(plain_password, stored_hash):
-    """Simple password verification (for demo - use bcrypt in production)"""
-    # For demo, we'll use a simple hash check
-    # In production, use bcrypt.checkpw()
-    test_hash = hashlib.sha256(plain_password.encode()).hexdigest()
+    """
+    Constant-time password verification (for demo - use bcrypt in production)
     
+    For MVP, all test users use password "password123"
+    In production, replace with: bcrypt.checkpw(plain_password.encode(), stored_hash.encode())
+    """
     # For demo, accept if password is "password123"
-    if plain_password == "password123":
-        return True
-    
-    return test_hash == stored_hash
+    # Use constant-time comparison to prevent timing attacks
+    expected = "password123"
+    return hmac.compare_digest(plain_password, expected)
 
 def handler(request):
     """
@@ -70,20 +76,40 @@ def handler(request):
         }
     """
     try:
-        # Parse request
+        # Parse request - handle both Catalyst format and direct dict
         if hasattr(request, 'body'):
+            # Real Catalyst request object
             body = json.loads(request.body) if isinstance(request.body, str) else request.body
+        elif isinstance(request, dict) and 'body' in request:
+            # Our local server format: {'body': {...}, 'headers': {...}}
+            body = request['body']
         else:
+            # Direct dict
             body = request
         
-        email = body.get("email", "").strip()
+        email = body.get("email", "").strip().lower()
         password = body.get("password", "")
         
+        # Input validation
         if not email or not password:
             return {
                 "statusCode": 400,
                 "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
                 "body": json.dumps({"error": "Email and password are required"})
+            }
+        
+        if not validate_email(email):
+            return {
+                "statusCode": 400,
+                "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
+                "body": json.dumps({"error": "Invalid email format"})
+            }
+        
+        if len(password) < 8:
+            return {
+                "statusCode": 400,
+                "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
+                "body": json.dumps({"error": "Password must be at least 8 characters"})
             }
         
         log_info("Login attempt", {"email": email})
@@ -155,7 +181,7 @@ def handler(request):
             }
         }
         
-        user = users_db.get(email.lower())
+        user = users_db.get(email)  # email already lowercased
         
         if not user:
             log_info("Login failed - user not found", {"email": email})

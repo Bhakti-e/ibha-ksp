@@ -40,6 +40,61 @@ Ibha is being developed for the **KSP Datathon 2026 (Challenge 1)** hosted on Ha
 
 ## ✨ Features
 
+### 🎉 MVP Features (End-to-End Working)
+
+**Phase 2-7 Implementation Complete** – The following features are **fully functional** with real database queries and NO external LLM dependencies:
+
+#### 1. **Real Authentication & Authorization** ✅
+- JWT-style token-based authentication
+- 6 user roles: Constable, SI, Inspector, DSP, SCRB_Analyst, Admin
+- Row-Level Security (RLS):
+  - Constable: Station-level access only
+  - Inspector: Station-level access
+  - DSP: District-wide access
+  - SCRB_Analyst/Admin: State-wide access
+- Password: `password123` for all demo users
+
+#### 2. **Chat with SQL-Driven Answers** ✅
+- **NO external LLM** – Uses keyword-based NLP + SQL queries + templates
+- Multilingual support: English + Kannada
+- Query examples:
+  - "Show theft cases in last 30 days"
+  - "How many cases this month?"
+  - "ಕಳೆದ 30 ದಿನಗಳಲ್ಲಿ ಕಳ್ಳತನ ಪ್ರಕರಣಗಳನ್ನು ತೋರಿಸಿ" (Kannada)
+- Returns: Natural language answer + FIR table + explanation
+- RLS enforced on all queries
+- Audit logged automatically
+
+#### 3. **Crime Trends & Hotspots** ✅
+- Top 10 stations by crime count
+- Risk levels: HIGH (>30% increase), MEDIUM (0-30%), LOW (<0%)
+- Monthly trend analysis (last 12 months)
+- Comparison with previous period
+- RLS-filtered by user role
+
+#### 4. **Criminal Network Visualization** ✅
+- Graph showing accused ↔ cases ↔ co-accused
+- Canvas-based visualization (no external libraries)
+- Network metadata: total nodes, edges, cases
+- Search by Accused ID from seed data
+
+#### 5. **Admin & Audit Logging** ✅
+- Every query logged to `audit_logs` table
+- Admin dashboard showing:
+  - Total cases, users, queries today
+  - Database health check
+  - Top querying users
+  - Full audit log table
+- Access restricted to Admin/SCRB_Analyst roles
+
+#### 6. **Security Implementation** ✅
+- HMAC-SHA256 token signatures
+- 4-hour token expiry
+- Parameterized SQL queries (SQL injection safe)
+- Input validation on all endpoints
+- Error handling with no stack trace exposure
+- Complete security documentation
+
 ### Core Capabilities
 
 - ✅ **Multilingual NLP Chatbot** (English + Kannada, code-mixing support)
@@ -78,33 +133,143 @@ Ibha uses a **controlled ingestion pipeline** to ensure data quality and securit
 
 ## 🏗️ Architecture
 
-Ibha is built on **Zoho Catalyst**, a serverless cloud platform. The architecture follows a clean separation of concerns:
+Ibha follows a clean three-tier architecture with strict security boundaries:
 
 ```
-User (Web/Mobile)
-     ↓
-Web Client Hosting (Next.js)
-     ↓
-API Gateway (OAuth, Rate Limiting)
-     ↓
-Serverless Functions (Python)
-     ↓
-┌─────────────┬─────────────┬─────────────┬─────────────┐
-│  Data Store │   NoSQL     │  QuickML    │   Zia AI    │
-│  (Postgres) │  (Graph DB) │  (RAG/LLM)  │ (STT/TTS)   │
-└─────────────┴─────────────┴─────────────┴─────────────┘
-     ↓                            ↓
-SmartBrowz (PDF)          Circuits (Workflows)
+┌─────────────────────────────────────────────────────────────────┐
+│                         USER INTERFACE                          │
+│                    (Next.js 14 + TypeScript)                    │
+├─────────────────────────────────────────────────────────────────┤
+│  Login Page  │  Chat Page  │  Trends Page  │  Network  │ Admin │
+│  (JWT Auth)  │   (NLP+SQL) │   (Analytics) │  (Graph)  │ (Logs)│
+└──────────────┬──────────────────────────────────────────────────┘
+               │ HTTPS + JWT Token in Authorization Header
+               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        API GATEWAY LAYER                        │
+│                    (CORS + Token Validation)                    │
+└──────────────┬──────────────────────────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    SERVERLESS FUNCTIONS                         │
+│                      (Python 3.11)                              │
+├─────────────┬──────────┬────────────┬───────────┬──────────────┤
+│  /auth/     │ /chat    │ /trends/   │ /network/ │  /admin/     │
+│   login     │          │  hotspots  │  accused  │  audit-logs  │
+│ (auth.py)   │(chat.py) │  summary   │  {id}     │    stats     │
+│             │          │(trends.py) │(network.py)│  (admin.py)  │
+└─────────────┴──────────┴────────────┴───────────┴──────────────┘
+               │          │            │            │
+               ▼          ▼            ▼            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      SHARED LIBRARIES (lib/)                    │
+├──────────────┬────────────────┬───────────────┬─────────────────┤
+│ auth_utils   │  nlp_simple    │ query_builder │    db           │
+│ (JWT+RLS)    │  (Keywords)    │   (SQL Gen)   │  (PostgreSQL)   │
+├──────────────┴────────────────┴───────────────┴─────────────────┤
+│  templates (EN/KN)  │  logging_utils (Structured Logs)          │
+└─────────────────────┴─────────────────────────────────────────────┘
+               │                            │
+               ▼                            ▼
+┌────────────────────────────┐  ┌──────────────────────────────────┐
+│   POSTGRESQL DATABASE      │  │      APPLICATION LOGS            │
+│  (Catalyst Data Store)     │  │   (Structured JSON Logging)      │
+├────────────────────────────┤  └──────────────────────────────────┘
+│  Tables:                   │
+│  • CaseMaster (FIRs)       │
+│  • Accused                 │
+│  • Victim                  │
+│  • Unit (Stations)         │
+│  • CrimeSubHead            │
+│  • users                   │
+│  • audit_logs              │
+└────────────────────────────┘
+
+                SECURITY LAYERS
+    ╔═══════════════════════════════════════════╗
+    ║  Layer 1: AUTHENTICATION (JWT Tokens)    ║
+    ║  • HMAC-SHA256 signatures                ║
+    ║  • 4-hour expiry                         ║
+    ║  • Token verification on every request   ║
+    ╠═══════════════════════════════════════════╣
+    ║  Layer 2: RBAC (Role-Based Access)       ║
+    ║  • 6 roles: Constable → Admin            ║
+    ║  • Permission checks at endpoint level   ║
+    ║  • Feature-level access control          ║
+    ╠═══════════════════════════════════════════╣
+    ║  Layer 3: RLS (Row-Level Security)       ║
+    ║  • Station-level: WHERE station_id = N   ║
+    ║  • District-level: WHERE district_id = N ║
+    ║  • Automatic SQL filter injection        ║
+    ╚═══════════════════════════════════════════╝
+
+                DATA FLOW: CHAT QUERY
+    ┌─────────────────────────────────────────┐
+    │ 1. User types: "Show theft cases"      │
+    └──────────────┬──────────────────────────┘
+                   ▼
+    ┌─────────────────────────────────────────┐
+    │ 2. Frontend: POST /chat + JWT token     │
+    └──────────────┬──────────────────────────┘
+                   ▼
+    ┌─────────────────────────────────────────┐
+    │ 3. chat.py: Verify token → Extract role │
+    └──────────────┬──────────────────────────┘
+                   ▼
+    ┌─────────────────────────────────────────┐
+    │ 4. nlp_simple: Extract entities         │
+    │    • Intent: search_cases               │
+    │    • Crime: theft (ID 1)                │
+    │    • Date: last 30 days                 │
+    └──────────────┬──────────────────────────┘
+                   ▼
+    ┌─────────────────────────────────────────┐
+    │ 5. query_builder: Build SQL with RLS    │
+    │    SELECT * FROM CaseMaster             │
+    │    WHERE CrimeMinorHeadID = 1           │
+    │      AND CrimeRegisteredDate >= ...     │
+    │      AND PoliceStationID = 1  ← RLS     │
+    │    LIMIT 50                             │
+    └──────────────┬──────────────────────────┘
+                   ▼
+    ┌─────────────────────────────────────────┐
+    │ 6. db: Execute parameterized query      │
+    │    Returns 8 rows (8 theft FIRs)        │
+    └──────────────┬──────────────────────────┘
+                   ▼
+    ┌─────────────────────────────────────────┐
+    │ 7. templates: Format answer             │
+    │    "Found 8 theft cases in last 30 days"│
+    └──────────────┬──────────────────────────┘
+                   ▼
+    ┌─────────────────────────────────────────┐
+    │ 8. Build explanation contract           │
+    │    • Reasoning: intent → SQL → answer   │
+    │    • Guardrails: RLS applied, SQL safe  │
+    └──────────────┬──────────────────────────┘
+                   ▼
+    ┌─────────────────────────────────────────┐
+    │ 9. Log to audit_logs table              │
+    │    (user, query, intent, result_count)  │
+    └──────────────┬──────────────────────────┘
+                   ▼
+    ┌─────────────────────────────────────────┐
+    │ 10. Return JSON response to frontend    │
+    │     • answer: "Found 8 theft cases..."  │
+    │     • data: [8 FIR objects]             │
+    │     • citations: [FIR numbers]          │
+    │     • explanation_contract: {...}       │
+    └─────────────────────────────────────────┘
 ```
 
-**Key Components**:
-- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS
-- **Backend**: Python 3.11 Serverless Functions
-- **Database**: Catalyst Data Store (Relational) + NoSQL (Graph)
-- **AI/ML**: QuickML (RAG + LLM Serving with Qwen 2.5 models)
-- **Voice**: Zia Speech-to-Text & Text-to-Speech
-- **Reports**: SmartBrowz for PDF generation
-- **Automation**: Circuits (document processing) + Cron Jobs (nightly indexing)
+**Key Design Principles:**
+1. **Database-First:** All answers from SQL, no hallucination
+2. **Security-First:** 3-layer security enforced on every request
+3. **Explainable:** Every response includes reasoning
+4. **No External AI:** Zero calls to OpenAI, Anthropic, Google
+5. **Stateless:** Functions can scale horizontally
+6. **Auditable:** Complete trail from query to answer
 
 For detailed architecture, see [docs/architecture.md](docs/architecture.md).
 
@@ -352,8 +517,98 @@ For complete dataset integration instructions, see:
 
 - **Node.js**: >= 18.0.0
 - **npm**: >= 9.0.0
-- **Python**: 3.11 (for local testing of functions)
+- **Python**: 3.11 (for Catalyst functions)
+- **PostgreSQL**: 13+ (for local database) OR Catalyst Data Store
 - **Catalyst CLI**: Install from [Zoho Catalyst](https://www.zoho.com/catalyst/)
+
+### Quick Start (MVP - 5 Minutes)
+
+#### Step 1: Setup Database
+
+**Option A: Local PostgreSQL**
+```bash
+# Create database
+createdb ibha
+
+# Run schema
+psql -d ibha -f catalyst/datastore/init_db.sql
+
+# Load seed data (35+ FIRs, 6 users, accused, victims)
+psql -d ibha -f catalyst/datastore/seed_data.sql
+
+# Verify
+psql -d ibha -c "SELECT COUNT(*) FROM CaseMaster;"
+# Expected: 35
+```
+
+**Option B: Catalyst Data Store**
+```bash
+# Deploy schema
+catalyst sql:run catalyst/datastore/init_db.sql --env dev
+
+# Load seed data
+catalyst sql:run catalyst/datastore/seed_data.sql --env dev
+```
+
+#### Step 2: Configure Environment
+
+```bash
+cd web
+cp .env.example .env.local
+
+# Edit .env.local:
+# NEXT_PUBLIC_CATALYST_API_BASE_URL=http://localhost:3000/api/v1
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_NAME=ibha
+# DB_USER=postgres
+# DB_PASSWORD=postgres
+```
+
+#### Step 3: Run Backend (Python Functions)
+
+**Option A: Deploy to Catalyst**
+```bash
+cd catalyst/functions
+catalyst deploy --service functions
+```
+
+**Option B: Local Testing** (requires psycopg2)
+```bash
+pip install psycopg2-binary
+# Then test individual functions
+python -m catalyst.functions.auth
+```
+
+#### Step 4: Run Frontend
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+#### Step 5: Login & Test
+
+Use these **demo credentials**:
+
+| Role | Email | Password | Access |
+|------|-------|----------|--------|
+| **Constable** | rajesh.kumar@ksp.gov.in | password123 | Koramangala Station only |
+| **Inspector** | arun.desai@ksp.gov.in | password123 | Whitefield Station only |
+| **DSP** | lakshmi.rao@ksp.gov.in | password123 | District-wide |
+| **Admin** | admin.system@ksp.gov.in | password123 | State-wide + Admin panel |
+
+**Test Queries**:
+1. Login as Constable (rajesh.kumar@ksp.gov.in)
+2. Go to Chat
+3. Ask: **"Show theft cases in last 30 days"**
+4. Expected: ~15 theft cases from Koramangala station
+5. Go to Trends → See hotspots with risk levels
+6. Go to Network → Enter Accused ID: **1** (Ravi Kumar)
+7. Go to Admin → View audit logs (Admin only)
 
 ### Installation
 

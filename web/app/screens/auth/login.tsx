@@ -33,47 +33,53 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-secondary p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-surface p-4 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, hsl(var(--primary)) 1px, transparent 0)`,
+          backgroundSize: '40px 40px'
+        }}></div>
+      </div>
+
+      {/* Login Card */}
+      <div className="w-full max-w-md relative z-10">
         {/* Logo and Header */}
         <div className="text-center mb-8 animate-fade-in">
-          <div className="flex justify-center mb-4">
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-              {/* Elephant Icon Placeholder */}
-              <svg
-                className="w-12 h-12 text-primary"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 3.87 3.13 7 7 7s7-3.13 7-7c0-3.87-3.13-7-7-7zm0 12c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" />
-                <circle cx="12" cy="9" r="2" />
-                <path d="M12 17c-3.31 0-6 2.69-6 6v1h12v-1c0-3.31-2.69-6-6-6z" />
+          {/* Shield with Elephant Logo */}
+          <div className="flex justify-center mb-6">
+            <div className="relative w-24 h-24 bg-gradient-to-br from-primary via-blue-600 to-cyan-600 rounded-2xl flex items-center justify-center shadow-2xl animate-pulse-glow">
+              <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
               </svg>
             </div>
           </div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">Ibha</h1>
-          <p className="text-foreground-muted">
-            Intelligent Crime Analytics for Karnataka Police
+          <h1 className="text-4xl font-bold gradient-text mb-2">Ibha</h1>
+          <p className="text-xl text-foreground font-semibold mb-1">
+            KSP Crime Intelligence
           </p>
-          <p className="text-sm text-foreground-muted mt-1">
-            State Crime Records Bureau (SCRB)
+          <p className="text-sm text-foreground-muted">
+            Secure, multilingual crime intelligence assistant
+          </p>
+          <p className="text-xs text-foreground-muted mt-1">
+            State Crime Records Bureau (SCRB) • Karnataka Police
           </p>
         </div>
 
-        {/* Login Card */}
+        {/* Login Form Card */}
         <div className="card animate-slide-in">
-          <h2 className="text-xl font-semibold mb-6">Sign In</h2>
+          <h2 className="text-2xl font-bold mb-6 text-center">Officer Sign In</h2>
           
           {error && (
-            <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-md mb-4">
-              <p className="text-sm">{error}</p>
+            <div className="bg-red-600/10 border border-red-600/50 text-red-400 px-4 py-3 rounded-lg mb-4 animate-fade-in">
+              <p className="text-sm font-medium">⚠️ {error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2">
-                Email
+              <label htmlFor="email" className="block text-sm font-semibold mb-2 text-foreground">
+                Email Address
               </label>
               <input
                 id="email"
@@ -84,73 +90,80 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
+                disabled={loading}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-2">
+              <label htmlFor="password" className="block text-sm font-semibold mb-2 text-foreground">
                 Password
               </label>
               <input
                 id="password"
                 type="password"
                 className="input w-full"
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
+                disabled={loading}
               />
             </div>
 
             <button
               type="submit"
-              className="btn btn-primary w-full"
+              className="btn btn-primary w-full text-base font-semibold py-3"
               disabled={loading}
             >
               {loading ? (
                 <span className="flex items-center justify-center">
-                  <svg
-                    className="animate-spin h-5 w-5 mr-2"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  Signing in...
+                  <span className="spinner mr-3"></span>
+                  Authenticating...
                 </span>
               ) : (
-                'Sign In'
+                <span className="flex items-center justify-center">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  Sign In Securely
+                </span>
               )}
             </button>
           </form>
 
+          {/* Demo Credentials */}
           <div className="mt-6 pt-6 border-t border-border">
-            <p className="text-sm text-foreground-muted text-center">
-              For demo purposes, use any email and password.
-            </p>
-            <p className="text-xs text-foreground-muted text-center mt-2">
-              Real authentication will use Catalyst Auth OAuth 2.0
-            </p>
+            <p className="text-sm font-bold text-foreground mb-3">🔑 Demo Credentials:</p>
+            <div className="bg-surface rounded-lg p-4 space-y-2 text-xs text-foreground-muted">
+              <div className="flex justify-between">
+                <span className="font-semibold">Constable:</span>
+                <span className="text-primary">rajesh.kumar@ksp.gov.in</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">Inspector:</span>
+                <span className="text-primary">arun.desai@ksp.gov.in</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">DSP (District):</span>
+                <span className="text-primary">lakshmi.rao@ksp.gov.in</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">Admin:</span>
+                <span className="text-primary">admin.system@ksp.gov.in</span>
+              </div>
+              <div className="mt-3 pt-3 border-t border-border text-center">
+                <span className="font-bold text-warning">Password: </span>
+                <span className="font-mono text-foreground">password123</span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-8 text-sm text-foreground-muted">
-          <p>Karnataka State Police © 2026</p>
-          <p className="mt-1">Powered by Zoho Catalyst</p>
+        <div className="text-center mt-6 text-sm text-foreground-muted animate-fade-in">
+          <p>© 2026 Karnataka State Police</p>
+          <p className="mt-1 text-xs">Powered by Zoho Catalyst • Secure by Design</p>
         </div>
       </div>
     </div>

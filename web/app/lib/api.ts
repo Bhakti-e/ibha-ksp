@@ -149,22 +149,9 @@ export interface LoginResponse {
 }
 
 export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
-  // TODO: Replace with real Catalyst Auth integration
-  // For scaffold, simulate login
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const mockToken = 'demo_token_' + Date.now();
-      const mockUser = {
-        user_id: 'USR_DEMO_001',
-        role: credentials.email.includes('admin') ? 'Admin' : 'Constable',
-        station_id: 'STN_KORAMANGALA',
-        district_id: 'DIST_BANGALORE_SOUTH',
-        email: credentials.email,
-        full_name: 'Demo User',
-      };
-      resolve({ token: mockToken, user: mockUser });
-    }, 1000);
-  });
+  // Real login call to backend auth endpoint
+  const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
+  return response.data;
 }
 
 export function logout(): void {
@@ -177,6 +164,117 @@ export function getCurrentUser() {
   if (typeof window === 'undefined') return null;
   const userData = localStorage.getItem('user_data');
   return userData ? JSON.parse(userData) : null;
+}
+
+// ==================== Trends & Hotspots ====================
+
+export interface Hotspot {
+  station_id: number;
+  station_name: string;
+  crime_count: number;
+  heinous_count: number;
+  risk_level: 'HIGH' | 'MEDIUM' | 'LOW';
+  reason: string;
+  change_percentage: number;
+}
+
+export interface TrendData {
+  month: string;
+  case_count: number;
+  crime_type: string;
+  unique_crimes: number;
+}
+
+export async function getHotspots(days: number = 30): Promise<{ hotspots: Hotspot[]; period_days: number }> {
+  const response = await apiClient.get('/trends/hotspots', {
+    params: { days }
+  });
+  return response.data;
+}
+
+export async function getTrendsSummary(months: number = 12): Promise<{ trends: TrendData[]; period_months: number }> {
+  const response = await apiClient.get('/trends/summary', {
+    params: { months }
+  });
+  return response.data;
+}
+
+// ==================== Criminal Network ====================
+
+export interface NetworkNode {
+  data: {
+    id: string;
+    label: string;
+    type: 'person' | 'case';
+    age?: number;
+    is_central?: boolean;
+    crime_type?: string;
+    description?: string;
+  };
+}
+
+export interface NetworkEdge {
+  data: {
+    id: string;
+    source: string;
+    target: string;
+    relationship: 'ACCUSED_IN' | 'CO_ACCUSED';
+    case_id?: string;
+  };
+}
+
+export interface NetworkGraph {
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+  central_person_id: string;
+  metadata: {
+    total_nodes: number;
+    total_edges: number;
+    cases_count: number;
+  };
+}
+
+export async function getNetwork(personId: string): Promise<NetworkGraph> {
+  const response = await apiClient.get(`/network/accused/${personId}`);
+  return response.data;
+}
+
+// ==================== Admin ====================
+
+export interface AuditLog {
+  log_id: number;
+  user_id: string;
+  role: string;
+  station_id: number;
+  district_id: number;
+  query_text: string;
+  intent: string;
+  filters_applied: any;
+  result_count: number;
+  timestamp: string;
+}
+
+export async function getAuditLogs(params?: {
+  limit?: number;
+  user_id?: string;
+  from_date?: string;
+  to_date?: string;
+}): Promise<{ logs: AuditLog[]; count: number }> {
+  const response = await apiClient.get('/admin/audit-logs', { params });
+  return response.data;
+}
+
+export interface SystemStats {
+  total_cases: number;
+  total_users: number;
+  total_queries_today: number;
+  top_querying_users: Array<{ user_id: string; query_count: number }>;
+  database_health: 'OK' | 'WARNING' | 'ERROR';
+}
+
+export async function getSystemStats(): Promise<SystemStats> {
+  const response = await apiClient.get('/admin/stats');
+  return response.data;
 }
 
 // ==================== Error Handling ====================

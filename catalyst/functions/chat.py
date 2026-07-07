@@ -1,7 +1,8 @@
 """
 Chat Endpoint for Ibha Conversational AI
 -----------------------------------------
-This endpoint processes user queries and returns AI-generated answers with citations.
+This endpoint processes user queries and returns SQL-generated answers with citations.
+NO external LLM - uses keyword NLP + SQL queries + response templates.
 Supports both text and voice modes, multilingual (English + Kannada).
 
 Security: Enforces RBAC/RLS to ensure users only see data from their authorized scope.
@@ -9,8 +10,12 @@ Security: Enforces RBAC/RLS to ensure users only see data from their authorized 
 
 import json
 from datetime import datetime
-from lib.auth_utils import get_user_claims, enforce_rls
+from lib.auth_utils import require_auth
 from lib.logging_utils import log_info, log_error
+from lib import nlp_simple
+from lib import query_builder
+from lib import db
+from lib import templates
 
 
 def handler(request):
@@ -21,32 +26,30 @@ def handler(request):
         {
             "query": str,
             "mode": "text" | "voice",
-            "language": "en" | "kn"
+            "language": "en" | "kn"  (optional, auto-detected)
         }
     
     Returns:
         {
             "answer": str,
-            "citations": [{"chunk_id", "source", "text"}],
-            "explanation_contract": {
-                "reasoning_sketch": [str],
-                "tool_trail": [str],
-                "guardrails": [str],
-                "confidence": float
-            }
+            "data": [row_dicts],
+            "citations": [FIR_numbers],
+            "explanation_contract": {...}
         }
     """
     try:
-        # Parse request body
+        # Parse request body - handle both Catalyst format and direct dict
         if hasattr(request, 'body'):
             body = json.loads(request.body) if isinstance(request.body, str) else request.body
+        elif isinstance(request, dict) and 'body' in request:
+            body = request['body']
         else:
             body = request
         
-        # Extract and validate inputs
+        # Extract inputs
         query = body.get("query", "").strip()
         mode = body.get("mode", "text")
-        language = body.get("language", "en")
+        language_hint = body.get("language", None)
         
         # Input validation
         if not query:
@@ -63,101 +66,121 @@ def handler(request):
                 "body": json.dumps({"error": "Mode must be 'text' or 'voice'"})
             }
         
-        if language not in ["en", "kn"]:
+        # Authenticate user
+        try:
+            user_claims = require_auth(request)
+        except ValueError as e:
             return {
-                "statusCode": 400,
+                "statusCode": 401,
                 "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
-                "body": json.dumps({"error": "Language must be 'en' or 'kn'"})
+                "body": json.dumps({"error": str(e)})
             }
-        
-        # TODO: Extract JWT token from Authorization header
-        # token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        
-        # Get user claims (RBAC/RLS enforcement)
-        # TODO: Replace with real JWT validation using Catalyst Auth
-        user_claims = get_user_claims("")
         
         log_info("Chat query received", {
             "user_id": user_claims["user_id"],
             "role": user_claims["role"],
             "station_id": user_claims["station_id"],
             "query_length": len(query),
-            "mode": mode,
-            "language": language
+            "mode": mode
         })
         
-        # TODO: Apply RLS filters based on user role and station
-        # base_query = {"station_id": user_claims["station_id"]}
-        # filtered_query = enforce_rls(user_claims, base_query)
+        # STEP 1: Extract entities using simple NLP (NO LLM)
+        entities = nlp_simple.extract_entities(query)
+        language = language_hint or entities["language"]
         
-        # TODO: Real AI pipeline will go here:
-        # 1. Language detection (if not provided)
-        # 2. If mode == "voice", use Zia STT to convert to text
-        # 3. Translate query to English if language == "kn" (for RAG retrieval)
-        # 4. Apply RLS filters to RAG query
-        # 5. Retrieve top-k documents from QuickML RAG
-        # 6. Generate answer using QuickML LLM Serving (Qwen 2.5 14B)
-        # 7. Extract citations and explanation
-        # 8. If language == "kn" and mode == "voice", use Zia TTS for audio response
-        # 9. Apply PII filtering and guardrails
-        # 10. Log to audit trail
+        log_info("NLP entities extracted", entities)
         
-        # Demo response for scaffold testing
+        # Get human-readable crime name for templates
+        entities["crime_type_name"] = nlp_simple.get_crime_name(
+            entities.get("crime_type_ids"),
+            language
+        )
+        
+        # STEP 2: Build SQL query based on intent
+        intent = entities["intent"]
+        
+        if intent == "search_cases":
+            sql, params = query_builder.build_search_query(
+                user_claims,
+                entities["crime_type_ids"],
+                entities["date_from"],
+                entities["date_to"]
+            )
+        elif intent == "count_cases":
+            sql, params = query_builder.build_count_query(
+                user_claims,
+                entities["crime_type_ids"],
+                entities["date_from"],
+                entities["date_to"]
+            )
+        else:
+            # Default to search
+            sql, params = query_builder.build_search_query(
+                user_claims,
+                entities["crime_type_ids"],
+                entities["date_from"],
+                entities["date_to"]
+            )
+        
+        log_info("SQL query built", {"intent": intent, "param_count": len(params)})
+        
+        # STEP 3: Execute query against database
+        try:
+            data = db.execute_query(sql, params)
+        except Exception as db_error:
+            log_error("Database query failed", {"error": str(db_error)}, db_error)
+            return {
+                "statusCode": 500,
+                "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
+                "body": json.dumps({
+                    "error": templates.get_error_message("db_error", language)
+                })
+            }
+        
+        log_info("Query executed", {"result_count": len(data)})
+        
+        # STEP 4: Format answer using templates (NO LLM)
+        if intent == "search_cases":
+            formatted = templates.format_answer_search(data, entities, language)
+        elif intent == "count_cases":
+            formatted = templates.format_answer_count(data, entities, language)
+        else:
+            formatted = templates.format_answer_search(data, entities, language)
+        
+        # STEP 5: Build explanation contract
+        query_info = {
+            "user_role": user_claims["role"],
+            "station_id": user_claims["station_id"],
+            "result_count": len(data),
+            "limit": 50
+        }
+        explanation_contract = templates.build_explanation_contract(entities, query_info)
+        
+        # STEP 6: Build response
         response_data = {
-            "answer": (
-                f"Demo answer – Ibha backend is connected. Real AI logic will be added later. "
-                f"Query received: '{query[:50]}...' in {language} mode ({mode}). "
-                f"User: {user_claims['role']} from {user_claims['station_id']}."
-            ),
-            "citations": [
-                {
-                    "chunk_id": "demo_fir_001",
-                    "source": "FIR_2025_STN001_0042",
-                    "text": "Demo citation text for testing UI. This is a sample FIR excerpt that would appear as supporting evidence.",
-                    "metadata": {
-                        "station_id": "STN_001",
-                        "date": "2025-11-10",
-                        "crime_type": "Theft"
-                    }
-                },
-                {
-                    "chunk_id": "demo_fir_002",
-                    "source": "FIR_2025_STN001_0038",
-                    "text": "Another sample citation showing similar pattern in different case.",
-                    "metadata": {
-                        "station_id": "STN_001",
-                        "date": "2025-10-28",
-                        "crime_type": "Theft"
-                    }
-                }
-            ],
-            "explanation_contract": {
-                "reasoning_sketch": [
-                    "Received user query and detected language",
-                    f"Applied station-level RLS filters for {user_claims['station_id']} (stub)",
-                    "Retrieved top-k documents from RAG with similarity scores (stub)",
-                    "Generated answer using LLM with retrieved context (stub)",
-                    "Applied PII filtering and guardrails (stub)"
-                ],
-                "tool_trail": [
-                    "Language Detection (demo)",
-                    "RAG Retrieval (demo)",
-                    "LLM Generation (Qwen 2.5 14B - demo)",
-                    "PII Filter (demo)"
-                ],
-                "guardrails": [
-                    "RLS: station-level filtering applied",
-                    "PII Filter: names and IDs masked where appropriate",
-                    "Content Safety: response validated for professional context"
-                ],
-                "confidence": 0.92
+            "answer": formatted["answer_text"],
+            "data": formatted["data_rows"],
+            "citations": formatted["citations"],
+            "explanation_contract": explanation_contract,
+            "metadata": {
+                "intent": intent,
+                "language": language,
+                "result_count": len(data),
+                "timestamp": datetime.utcnow().isoformat()
             }
         }
         
+        # STEP 7: Log to audit (async - don't block response)
+        try:
+            log_audit(user_claims, query, intent, entities, len(data))
+        except Exception as audit_error:
+            log_error("Audit logging failed", {"error": str(audit_error)}, audit_error)
+            # Don't fail the request if audit logging fails
+        
         log_info("Chat response generated", {
             "user_id": user_claims["user_id"],
-            "citations_count": len(response_data["citations"]),
-            "confidence": response_data["explanation_contract"]["confidence"]
+            "result_count": len(data),
+            "intent": intent
         })
         
         return {
@@ -185,3 +208,48 @@ def handler(request):
                 "message": "Failed to process query"
             })
         }
+
+
+def log_audit(user_claims: dict, query: str, intent: str, entities: dict, result_count: int):
+    """
+    Log chat query to audit trail.
+    
+    Args:
+        user_claims: User authentication claims
+        query: Original query text
+        intent: Detected intent
+        entities: Extracted entities
+        result_count: Number of results returned
+    """
+    try:
+        sql = """
+            INSERT INTO audit_logs (
+                user_id, role, station_id, district_id,
+                query_text, intent, filters_applied, result_count
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        
+        filters_json = json.dumps({
+            "crime_type_ids": entities.get("crime_type_ids"),
+            "date_from": entities.get("date_from"),
+            "date_to": entities.get("date_to"),
+            "location_scope": entities.get("location_scope")
+        })
+        
+        params = (
+            user_claims["user_id"],
+            user_claims["role"],
+            user_claims["station_id"],
+            user_claims["district_id"],
+            query,
+            intent,
+            filters_json,
+            result_count
+        )
+        
+        db.execute_insert(sql, params)
+        log_info("Audit log created", {"user_id": user_claims["user_id"]})
+    
+    except Exception as e:
+        log_error("Audit log insertion failed", {"error": str(e)}, e)
+        # Don't propagate error - audit failure shouldn't break chat

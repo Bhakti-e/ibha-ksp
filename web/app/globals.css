@@ -4,24 +4,33 @@
 
 @layer base {
   :root {
-    --background: 222 47% 11%;
-    --foreground: 213 31% 91%;
+    /* Command Center Dark Theme - Police/Official Feel */
+    --background: 220 30% 8%;        /* Very dark blue-black */
+    --surface: 220 25% 12%;          /* Slightly lighter surface */
+    --foreground: 210 20% 92%;       /* Light gray text */
+    --foreground-muted: 210 15% 65%; /* Muted text */
     
-    --primary: 210 100% 56%;
+    /* Primary - Strong Blue */
+    --primary: 217 91% 60%;          /* Vivid blue */
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 91% 50%;
     
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 213 31% 91%;
+    /* Accent Colors - Risk & Status */
+    --accent-yellow: 45 95% 55%;     /* Warning/Medium risk */
+    --accent-green: 142 76% 45%;     /* Success/Low risk */
+    --accent-red: 0 84% 60%;         /* Critical/High risk */
     
-    --accent: 38 92% 50%;
-    --accent-foreground: 222 47% 11%;
+    /* Surfaces */
+    --card: 220 25% 14%;
+    --card-hover: 220 25% 16%;
+    --border: 220 20% 20%;
+    --input: 220 20% 18%;
+    --ring: 217 91% 60%;
     
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    
-    --border: 217 33% 22%;
-    --input: 217 33% 22%;
-    --ring: 210 100% 56%;
+    /* Status Colors */
+    --success: 142 76% 45%;
+    --warning: 45 95% 55%;
+    --danger: 0 84% 60%;
   }
   
   * {
@@ -29,64 +38,147 @@
   }
   
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   
-  /* Custom scrollbar for dark theme */
+  /* Custom scrollbar - Police theme */
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
   
   ::-webkit-scrollbar-track {
-    @apply bg-secondary;
+    background: hsl(var(--background));
   }
   
   ::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-md;
+    background: hsl(var(--border));
+    border-radius: 5px;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-primary/50;
+    background: hsl(var(--primary) / 0.5);
   }
 }
 
+
 @layer components {
-  /* Button styles */
+  /* Button Styles - Command Center Theme */
   .btn {
-    @apply px-4 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center px-4 py-2.5 rounded-lg font-medium 
+           transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring 
+           focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 
+           disabled:pointer-events-none shadow-sm;
   }
   
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+    @apply bg-primary text-primary-foreground hover:brightness-110 active:brightness-90;
   }
   
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+    @apply bg-surface text-foreground border border-border hover:bg-card;
   }
   
-  .btn-destructive {
-    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 active:bg-red-800;
   }
   
   .btn-ghost {
-    @apply hover:bg-secondary/50;
+    @apply hover:bg-surface/50 shadow-none;
   }
   
-  /* Input styles */
+  /* Input Styles */
   .input {
-    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-11 w-full rounded-lg border border-border bg-input px-4 py-2 text-sm
+           ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium 
+           placeholder:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 
+           focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed 
+           disabled:opacity-50 transition-colors;
   }
   
-  /* Card styles */
+  /* Card Styles */
   .card {
-    @apply rounded-lg border border-border bg-secondary/30 p-6 shadow-lg;
+    @apply rounded-xl border border-border bg-card p-6 shadow-lg transition-all;
   }
   
-  /* Gradient text */
+  .card-hover {
+    @apply hover:bg-card-hover hover:shadow-xl hover:border-primary/30;
+  }
+  
+  /* Badge Styles - Risk Levels */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide;
+  }
+  
+  .badge-high {
+    @apply bg-red-600/20 text-red-400 border border-red-600/50;
+  }
+  
+  .badge-medium {
+    @apply bg-yellow-600/20 text-yellow-400 border border-yellow-600/50;
+  }
+  
+  .badge-low {
+    @apply bg-green-600/20 text-green-400 border border-green-600/50;
+  }
+  
+  .badge-info {
+    @apply bg-blue-600/20 text-blue-400 border border-blue-600/50;
+  }
+  
+  /* Gradient Text - Logo/Headings */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary via-blue-400 to-cyan-400 bg-clip-text text-transparent;
+  }
+  
+  /* Table Styles */
+  .table {
+    @apply w-full border-collapse;
+  }
+  
+  .table-header {
+    @apply bg-surface border-b-2 border-border;
+  }
+  
+  .table-row {
+    @apply border-b border-border hover:bg-surface/50 transition-colors;
+  }
+  
+  .table-cell {
+    @apply px-4 py-3 text-sm;
+  }
+  
+  /* Loading Spinner */
+  .spinner {
+    @apply animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full;
+  }
+  
+  /* Panel/Section */
+  .panel {
+    @apply bg-surface border border-border rounded-xl p-6;
+  }
+  
+  /* Status Indicators */
+  .status-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+  }
+  
+  .status-active {
+    @apply bg-green-500;
+  }
+  
+  .status-inactive {
+    @apply bg-gray-500;
+  }
+  
+  .status-warning {
+    @apply bg-yellow-500;
+  }
+  
+  .status-error {
+    @apply bg-red-500;
   }
 }
 
@@ -94,18 +186,56 @@
   .text-balance {
     text-wrap: balance;
   }
+  
+  /* Animations */
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slide-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
+    }
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+  
+  .animate-slide-in {
+    animation: slide-in-up 0.4s ease-out;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s infinite;
+  }
 }
 
-/* Leaflet map styles for dark theme */
-.leaflet-container {
-  background: hsl(222, 47%, 11%) !important;
-}
-
-.leaflet-tile {
-  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-}
-
-/* Cytoscape container */
+/* Cytoscape Dark Theme */
 .cytoscape-container {
-  @apply w-full h-full bg-background rounded-lg border border-border;
+  @apply w-full h-full bg-background rounded-xl border border-border;
+}
+
+/* Chart.js Dark Theme Override */
+.chart-container {
+  @apply relative;
+}
+
+.chart-container canvas {
+  @apply rounded-lg;
 }
