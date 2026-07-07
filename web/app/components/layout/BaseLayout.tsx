@@ -2,9 +2,9 @@ import Navbar from './Navbar';
 
 export default function BaseLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'hsl(220 30% 8%)' }}>
+    <div className="min-h-screen bg-slate-900">
       <Navbar />
-      <main style={{ padding: '1.5rem', maxWidth: '1280px', margin: '0 auto' }}>
+      <main className="max-w-screen-xl mx-auto px-6 py-6">
         {children}
       </main>
     </div>
