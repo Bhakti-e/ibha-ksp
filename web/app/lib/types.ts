@@ -21,6 +21,7 @@ export interface ChatRequest {
   query: string;
   mode: 'text' | 'voice';
   language: 'en' | 'kn';
+  conversation?: Array<{ role: string; text: string }>;
 }
 
 export interface Citation {
@@ -46,6 +47,8 @@ export interface ChatResponse {
   answer: string;
   citations: Citation[];
   explanation_contract: ExplanationContract;
+  data?: any[];
+  metadata?: any;
 }
 
 export interface ChatMessage {

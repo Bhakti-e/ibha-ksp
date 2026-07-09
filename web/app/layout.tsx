@@ -4,6 +4,13 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Ibha – KSP Crime Intelligence',
   description: 'Intelligent Crime Analytics for Karnataka State Police',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [{ url: '/apple-icon.svg', type: 'image/svg+xml' }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -12,9 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* IBM Plex Sans — technical, readable, government-appropriate */}
         <link
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>

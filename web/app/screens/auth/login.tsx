@@ -108,7 +108,7 @@ export default function LoginPage() {
           </form>
 
           {/* Demo credentials */}
-          <div className="mt-5 pt-4 border-t border-slate-100">
+          <div className="mt-5 pt-4 border-t border-navy-border/40">
             <p className="text-2xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
               Demo accounts — click to fill
             </p>
@@ -118,7 +118,7 @@ export default function LoginPage() {
                   key={u.email}
                   type="button"
                   onClick={() => { setEmail(u.email); setPassword('password123'); }}
-                  className="w-full flex justify-between items-center px-3 py-1.5 rounded border border-slate-200 hover:bg-slate-50 text-left transition-colors"
+                  className="w-full flex justify-between items-center px-3 py-1.5 rounded border border-navy-border/60 hover:border-accent/50 hover:bg-surface-muted text-left transition-colors"
                 >
                   <span className="text-xs font-medium text-ink-secondary">{u.label}</span>
                   <span className="text-xs text-accent font-mono">{u.email}</span>

@@ -9,6 +9,7 @@ Security: Enforces RBAC/RLS to ensure users only see data from their authorized 
 """
 
 import json
+import re
 from datetime import datetime
 from lib.auth_utils import require_auth
 from lib.logging_utils import log_info, log_error
@@ -16,6 +17,25 @@ from lib import nlp_simple
 from lib import query_builder
 from lib import db
 from lib import templates
+
+try:
+    from agents.orchestrator import extract_entities_with_orchestrator
+    HAS_ORCHESTRATOR = True
+except ImportError:
+    HAS_ORCHESTRATOR = False
+    extract_entities_with_orchestrator = None
+
+try:
+    from agents.tools import TOOL_DESCRIPTIONS, execute_tools, fallback_tool_calls, format_tool_answer
+    from lib.openrouter_client import plan_tool_calls_openrouter
+    HAS_TOOLS = True
+except ImportError:
+    HAS_TOOLS = False
+    TOOL_DESCRIPTIONS = []
+    execute_tools = None
+    fallback_tool_calls = None
+    format_tool_answer = None
+    plan_tool_calls_openrouter = None
 
 
 def handler(request):
@@ -50,6 +70,7 @@ def handler(request):
         query = body.get("query", "").strip()
         mode = body.get("mode", "text")
         language_hint = body.get("language", None)
+        conversation = body.get("conversation", []) or body.get("history", [])
         
         # Input validation
         if not query:
@@ -84,22 +105,108 @@ def handler(request):
             "mode": mode
         })
         
-        # STEP 1: Extract entities using simple NLP (NO LLM)
-        entities = nlp_simple.extract_entities(query)
-        language = language_hint or entities["language"]
-        
+        # STEP 1: Extract entities via orchestrator (OpenRouter -> fallback keyword)
+        if HAS_ORCHESTRATOR and extract_entities_with_orchestrator:
+            entities = extract_entities_with_orchestrator(query, conversation)
+        else:
+            entities = nlp_simple.extract_entities(query)
+            entities["crime_type_name"] = nlp_simple.get_crime_name(
+                entities.get("crime_type_ids"), entities.get("language", "en")
+            )
+
+        language = language_hint or entities.get("language", "en")
         log_info("NLP entities extracted", entities)
+
+        if "crime_type_name" not in entities:
+            entities["crime_type_name"] = nlp_simple.get_crime_name(
+                entities.get("crime_type_ids"), language
+            )
+        case_identifier = extract_case_identifier(query)
         
-        # Get human-readable crime name for templates
-        entities["crime_type_name"] = nlp_simple.get_crime_name(
-            entities.get("crime_type_ids"),
-            language
-        )
-        
-        # STEP 2: Build SQL query based on intent
+        # STEP 2: Plan and execute safe backend tools when available.
         intent = entities["intent"]
-        
-        if intent == "search_cases":
+
+        if HAS_TOOLS:
+            tool_calls = None
+            if plan_tool_calls_openrouter:
+                tool_calls = plan_tool_calls_openrouter(query, TOOL_DESCRIPTIONS, entities, conversation)
+            if not tool_calls:
+                tool_calls = fallback_tool_calls(query, entities, case_identifier)
+            tool_results = execute_tools(user_claims, tool_calls)
+            formatted = format_tool_answer(tool_results, language)
+            data = formatted["data_rows"]
+
+            query_info = {
+                "user_role": user_claims["role"],
+                "station_id": user_claims["station_id"],
+                "result_count": len(data) if isinstance(data, list) else 0,
+                "limit": 50,
+            }
+            explanation_contract = templates.build_explanation_contract(entities, query_info)
+            explanation_contract["tool_calls"] = tool_calls
+
+            response_data = {
+                "answer": formatted["answer_text"],
+                "data": data,
+                "citations": formatted["citations"],
+                "explanation_contract": explanation_contract,
+                "metadata": {
+                    "intent": "tool_call",
+                    "entity_source": entities.get("_source", "keyword"),
+                    "language": language,
+                    "result_count": len(data) if isinstance(data, list) else 0,
+                    "tool_calls": tool_calls,
+                    "tool_results": [
+                        {
+                            "tool": r.get("tool"),
+                            "ok": r.get("ok"),
+                            "record_count": r.get("record_count", 0),
+                            "citations": r.get("citations", []),
+                            "error": r.get("error"),
+                        }
+                        for r in tool_results
+                    ],
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+            }
+
+            try:
+                log_audit(user_claims, query, "tool_call", entities, response_data["metadata"]["result_count"])
+            except Exception as audit_error:
+                log_error("Audit logging failed", {"error": str(audit_error)}, audit_error)
+
+            log_info("Chat tool response generated", {
+                "user_id": user_claims["user_id"],
+                "tools": [c.get("name") for c in tool_calls],
+                "result_count": response_data["metadata"]["result_count"],
+            })
+
+            return {
+                "statusCode": 200,
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "POST, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                },
+                "body": json.dumps(response_data),
+            }
+
+        # New agentic intents -> provide guidance but still run search for data table
+        redirect_intents = {
+            "sociological": "Sociological Insights window shows demographic breakdowns. Showing base data below.",
+            "profiling": "Offender Profiling window provides risk scoring. Showing base data below.",
+            "decision_support": "Investigation Support window gives summaries + similar cases. Showing base data below.",
+            "trends": "Trends window has hotspot maps + forecasting. Showing base data below.",
+            "network": "Network window visualizes co-accused links. Showing base data below.",
+            "financial": "Financial test data in new window. Showing base data below.",
+        }
+        intent_note = redirect_intents.get(intent)
+
+        if case_identifier:
+            intent = "case_lookup"
+            sql, params = query_builder.build_case_lookup_query(user_claims, case_identifier)
+        elif intent == "search_cases" or intent in redirect_intents:
             sql, params = query_builder.build_search_query(
                 user_claims,
                 entities["crime_type_ids"],
@@ -114,7 +221,6 @@ def handler(request):
                 entities["date_to"]
             )
         else:
-            # Default to search
             sql, params = query_builder.build_search_query(
                 user_claims,
                 entities["crime_type_ids"],
@@ -140,8 +246,17 @@ def handler(request):
         log_info("Query executed", {"result_count": len(data)})
         
         # STEP 4: Format answer using templates (NO LLM)
-        if intent == "search_cases":
+        if intent == "case_lookup":
             formatted = templates.format_answer_search(data, entities, language)
+            formatted["answer_text"] = (
+                f"Found case {case_identifier}. Details are shown below."
+                if data else
+                f"No case found for {case_identifier} within your authorised access."
+            )
+        elif intent == "search_cases" or intent in redirect_intents:
+            formatted = templates.format_answer_search(data, entities, language)
+            if intent_note:
+                formatted["answer_text"] = intent_note + " " + formatted["answer_text"]
         elif intent == "count_cases":
             formatted = templates.format_answer_count(data, entities, language)
         else:
@@ -164,6 +279,7 @@ def handler(request):
             "explanation_contract": explanation_contract,
             "metadata": {
                 "intent": intent,
+                "entity_source": entities.get("_source", "keyword"),
                 "language": language,
                 "result_count": len(data),
                 "timestamp": datetime.utcnow().isoformat()
@@ -252,4 +368,19 @@ def log_audit(user_claims: dict, query: str, intent: str, entities: dict, result
     
     except Exception as e:
         log_error("Audit log insertion failed", {"error": str(e)}, e)
+
+
+def extract_case_identifier(query: str):
+    """Extract an explicit FIR/CrimeNo or CaseMasterID from case follow-up questions."""
+    q = query.lower()
+
+    long_number = re.search(r"\b\d{8,24}\b", q)
+    if long_number:
+        return long_number.group(0)
+
+    labelled_case = re.search(r"\b(?:case|fir|crime)\s*(?:no\.?|number|id)?\s*[:#-]?\s*(\d{1,7})\b", q)
+    if labelled_case:
+        return labelled_case.group(1)
+
+    return None
         # Don't propagate error - audit failure shouldn't break chat

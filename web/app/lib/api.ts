@@ -17,7 +17,7 @@ import type {
 } from './types';
 
 // Base URL from environment variable
-const BASE_URL = process.env.NEXT_PUBLIC_CATALYST_API_BASE_URL || 'http://localhost:3000/api/v1';
+const BASE_URL = process.env.NEXT_PUBLIC_CATALYST_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -196,6 +196,71 @@ export async function getTrendsSummary(months: number = 12): Promise<{ trends: T
   const response = await apiClient.get('/trends/summary', {
     params: { months }
   });
+  return response.data;
+}
+
+// ==================== Sociological (Focus 4) ====================
+export interface SociologicalData {
+  age_buckets: Array<{ bucket: string; count: number }>;
+  gender: Array<{ gender_id: number; count: number }>;
+  unit_type: Array<{ unittypeid: number; case_count: number; crimeheadid: number }>;
+  hourly: Array<{ hour_of_day: number; case_count: number }>;
+  total_accused: number;
+  age_stats: { avg_age?: number; min_age?: number; max_age?: number };
+}
+
+export async function getSociologicalDemographics(): Promise<SociologicalData> {
+  const response = await apiClient.get('/sociological/demographics');
+  return response.data;
+}
+
+// ==================== Profiling (Focus 5) ====================
+export interface ProfilingData {
+  accused: any;
+  risk_score: number;
+  risk_level: 'HIGH' | 'MEDIUM' | 'LOW';
+  repeat_count: number;
+  co_accused_count: number;
+  co_accused: Array<{ accusedmasterid: number; accusedname: string; ageyear: number }>;
+  cases: any[];
+  mo_similar_cases: Array<{ case_id: number; similarity: number }>;
+  factors: any;
+}
+
+export async function getProfiling(accusedId: string): Promise<ProfilingData> {
+  const response = await apiClient.get(`/profiling/accused/${accusedId}`);
+  return response.data;
+}
+
+// ==================== Decision Support (Focus 6) ====================
+export async function getCaseSummary(caseId: string, language: string = 'en'): Promise<{ case: any; summary: string; summary_structured?: any; leads_generated?: any[]; source: string }> {
+  const response = await apiClient.get(`/decision-support/case/${caseId}/summary`, { params: { language } });
+  return response.data;
+}
+
+export async function getSimilarCases(caseId: string): Promise<{ similar_cases: Array<{ casemasterid: number; crimeno: string; brieffacts: string; similarity: number }> }> {
+  const response = await apiClient.get(`/decision-support/case/${caseId}/similar`);
+  return response.data;
+}
+
+export async function getCaseTimeline(caseId: string): Promise<{ case_id: number; crimeno: string; timeline: Array<{ date: string; type: string; title: string }> }> {
+  const response = await apiClient.get(`/decision-support/case/${caseId}/timeline`);
+  return response.data;
+}
+
+export async function getCaseLeads(caseId: string): Promise<{ case_id: number; leads: Array<{ type: string; description: string; priority: string; accused_id?: number }> }> {
+  const response = await apiClient.get(`/decision-support/case/${caseId}/leads`);
+  return response.data;
+}
+
+// ==================== Financial Test (Focus 7) ====================
+export async function getFinancialTransactions(caseId?: string): Promise<{ transactions: any[]; count: number; test_data: boolean; note: string }> {
+  const response = await apiClient.get('/financial/transactions', { params: { case_id: caseId } });
+  return response.data;
+}
+
+export async function getFinancialAccounts(): Promise<{ accounts: any[]; test_data: boolean }> {
+  const response = await apiClient.get('/financial/accounts');
   return response.data;
 }
 

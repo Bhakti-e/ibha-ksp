@@ -63,7 +63,7 @@ export default function NetworkPage() {
           </button>
         </form>
         <p className="text-2xs text-ink-muted mt-2">
-          Sample IDs from seed data: 1 (Ravi Kumar), 2 (Deepak Shetty), 3, 4
+          Tip: IDs with co-accused connections — 13 (Anil Patil), 5 (Mukesh Singh), 8 (Ramesh Babu), 11 (Vijay Kumar)
         </p>
       </div>
 
@@ -83,7 +83,7 @@ export default function NetworkPage() {
               {[
                 { color: 'bg-amber-700',  label: 'Central Person' },
                 { color: 'bg-accent',     label: 'Co-Accused' },
-                { color: 'bg-slate-500',  label: 'Cases' },
+                { color: 'bg-ink-muted',  label: 'Cases' },
               ].map(l => (
                 <span key={l.label} className="flex items-center gap-1.5">
                   <span className={`w-2.5 h-2.5 rounded-full ${l.color}`} />
@@ -94,12 +94,12 @@ export default function NetworkPage() {
           </div>
 
           {/* D3 graph */}
-          <div className="border-b border-slate-100">
+          <div className="border-b border-navy-border/40">
             <NetworkGraph data={network} />
           </div>
 
           {/* Stats row */}
-          <div className="grid grid-cols-3 divide-x divide-slate-100">
+          <div className="grid grid-cols-3 divide-x divide-navy-border/40">
             {[
               { label: 'Total Nodes',  value: network.metadata.total_nodes  },
               { label: 'Connections',  value: network.metadata.total_edges  },
@@ -113,11 +113,11 @@ export default function NetworkPage() {
           </div>
 
           {/* Persons list */}
-          <div className="px-5 py-4 border-t border-slate-100">
+          <div className="px-5 py-4 border-t border-navy-border/40">
             <h3 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Accused Persons</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {network.nodes.filter(n => n.data.type === 'person').map(n => (
-                <div key={n.data.id} className="flex items-center justify-between px-3 py-2 rounded border border-slate-100 bg-surface-muted">
+                <div key={n.data.id} className="flex items-center justify-between px-3 py-2 rounded border border-navy-border/40 bg-surface-muted">
                   <div>
                     <p className="text-sm font-medium text-ink">{n.data.label}</p>
                     <p className="text-2xs text-ink-muted">{n.data.age ? `Age ${n.data.age}` : 'Age unknown'}</p>
@@ -132,7 +132,7 @@ export default function NetworkPage() {
         </div>
       ) : !loading && !error && (
         <div className="card py-16 text-center shadow-panel">
-          <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 bg-navy-border/60 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-7 h-7 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857
