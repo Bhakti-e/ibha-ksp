@@ -1,4 +1,5 @@
 # Architecture
+> Last updated: UI/UX institutional redesign + OCR + D3 network + Pydantic agents
 
 Ibha is a crime intelligence system for Karnataka State Police (KSP). It lets officers query FIR data in natural language, view crime trends, and visualise criminal networks — all through a secure, role-restricted web interface.
 

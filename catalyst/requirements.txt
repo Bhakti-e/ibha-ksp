@@ -1,0 +1,36 @@
+# Ibha KSP — Python backend dependencies
+# Install with: pip install -r catalyst/requirements.txt
+
+# ── Core web/API ───────────────────────────────────────
+flask==3.0.3
+flask-cors==4.0.1
+psycopg2-binary==2.9.9
+
+# ── Pydantic v2 — request/response schemas, validation ─
+pydantic==2.7.1
+
+# ── LlamaIndex — orchestration / agent framework ───────
+llama-index==0.10.43
+llama-index-core==0.10.43
+# LLM integrations (pick one for prototype)
+llama-index-llms-huggingface==0.2.4   # HuggingFace local models
+# llama-index-llms-openai==0.1.22     # OpenAI (optional)
+
+# ── OCR ────────────────────────────────────────────────
+transformers==4.41.2        # HuggingFace Transformers
+Pillow==10.3.0              # Image loading
+torch==2.3.0                # Required by transformers OCR models
+torchvision==0.18.0         # Optional, some models use it
+# sentencepiece needed by many tokenizers
+sentencepiece==0.2.0
+
+# ── Sentence Transformers (semantic NLP) ───────────────
+# Provides smarter embeddings than pure keyword matching
+sentence-transformers==3.0.1
+
+# ── pgvector Python client ─────────────────────────────
+pgvector==0.3.1             # pgvector <-> psycopg2 adapter
+
+# ── Utilities ──────────────────────────────────────────
+python-multipart==0.0.9     # multipart file uploads
+python-jose==3.3.0          # JWT (alternative to manual impl)

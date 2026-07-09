@@ -45,6 +45,15 @@ except Exception as e:
     print(f"❌ Error importing handlers: {e}")
     sys.exit(1)
 
+# OCR handler — optional (requires torch + transformers)
+try:
+    from ocr_service import handler as ocr_handler
+    OCR_AVAILABLE = True
+    print("✅ OCR handler imported successfully")
+except Exception as e:
+    OCR_AVAILABLE = False
+    print(f"⚠️  OCR handler not available (install torch + transformers): {e}")
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend
 
@@ -164,6 +173,32 @@ def admin_stats():
 def health():
     """Health check endpoint"""
     return jsonify({"status": "OK", "service": "Ibha Local API"}), 200
+
+
+@app.route('/api/v1/ocr/extract', methods=['POST'])
+def ocr_extract():
+    """OCR extraction endpoint — accepts base64 image or multipart file"""
+    if not OCR_AVAILABLE:
+        return jsonify({
+            "error": "OCR not available. Install: pip install torch transformers Pillow"
+        }), 503
+
+    try:
+        # Support both JSON (base64) and multipart file upload
+        if request.content_type and 'multipart' in request.content_type:
+            file = request.files.get('file')
+            if not file:
+                return jsonify({"error": "No file in request"}), 400
+            image_bytes = file.read()
+            from ocr_service import extract_text_from_image_bytes
+            text = extract_text_from_image_bytes(image_bytes)
+            return jsonify({"text": text, "char_count": len(text)}), 200
+        else:
+            request_obj = make_request_object(request)
+            result = ocr_handler(request_obj)
+            return parse_response(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     print("=" * 60)
