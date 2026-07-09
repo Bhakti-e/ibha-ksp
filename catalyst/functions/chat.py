@@ -25,6 +25,18 @@ except ImportError:
     HAS_ORCHESTRATOR = False
     extract_entities_with_orchestrator = None
 
+try:
+    from agents.tools import TOOL_DESCRIPTIONS, execute_tools, fallback_tool_calls, format_tool_answer
+    from lib.openrouter_client import plan_tool_calls_openrouter
+    HAS_TOOLS = True
+except ImportError:
+    HAS_TOOLS = False
+    TOOL_DESCRIPTIONS = []
+    execute_tools = None
+    fallback_tool_calls = None
+    format_tool_answer = None
+    plan_tool_calls_openrouter = None
+
 
 def handler(request):
     """
@@ -111,8 +123,74 @@ def handler(request):
             )
         case_identifier = extract_case_identifier(query)
         
-        # STEP 2: Build SQL query based on intent
+        # STEP 2: Plan and execute safe backend tools when available.
         intent = entities["intent"]
+
+        if HAS_TOOLS:
+            tool_calls = None
+            if plan_tool_calls_openrouter:
+                tool_calls = plan_tool_calls_openrouter(query, TOOL_DESCRIPTIONS, entities, conversation)
+            if not tool_calls:
+                tool_calls = fallback_tool_calls(query, entities, case_identifier)
+            tool_results = execute_tools(user_claims, tool_calls)
+            formatted = format_tool_answer(tool_results, language)
+            data = formatted["data_rows"]
+
+            query_info = {
+                "user_role": user_claims["role"],
+                "station_id": user_claims["station_id"],
+                "result_count": len(data) if isinstance(data, list) else 0,
+                "limit": 50,
+            }
+            explanation_contract = templates.build_explanation_contract(entities, query_info)
+            explanation_contract["tool_calls"] = tool_calls
+
+            response_data = {
+                "answer": formatted["answer_text"],
+                "data": data,
+                "citations": formatted["citations"],
+                "explanation_contract": explanation_contract,
+                "metadata": {
+                    "intent": "tool_call",
+                    "entity_source": entities.get("_source", "keyword"),
+                    "language": language,
+                    "result_count": len(data) if isinstance(data, list) else 0,
+                    "tool_calls": tool_calls,
+                    "tool_results": [
+                        {
+                            "tool": r.get("tool"),
+                            "ok": r.get("ok"),
+                            "record_count": r.get("record_count", 0),
+                            "citations": r.get("citations", []),
+                            "error": r.get("error"),
+                        }
+                        for r in tool_results
+                    ],
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+            }
+
+            try:
+                log_audit(user_claims, query, "tool_call", entities, response_data["metadata"]["result_count"])
+            except Exception as audit_error:
+                log_error("Audit logging failed", {"error": str(audit_error)}, audit_error)
+
+            log_info("Chat tool response generated", {
+                "user_id": user_claims["user_id"],
+                "tools": [c.get("name") for c in tool_calls],
+                "result_count": response_data["metadata"]["result_count"],
+            })
+
+            return {
+                "statusCode": 200,
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "POST, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                },
+                "body": json.dumps(response_data),
+            }
 
         # New agentic intents -> provide guidance but still run search for data table
         redirect_intents = {

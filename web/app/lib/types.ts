@@ -47,6 +47,8 @@ export interface ChatResponse {
   answer: string;
   citations: Citation[];
   explanation_contract: ExplanationContract;
+  data?: any[];
+  metadata?: any;
 }
 
 export interface ChatMessage {

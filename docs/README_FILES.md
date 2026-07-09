@@ -5,12 +5,10 @@ ibha-ksp/
 ├── web/                          Next.js 14 frontend application
 ├── catalyst/                     Zoho Catalyst backend configuration
 ├── data/                         Sample data and schema diagrams
-├── docs/                         (removed — see README_*.md files)
+├── docs/                         Public documentation; docs/plan is ignored/private
+├── scripts/                      Utility scripts such as embedding backfill
 ├── local_server.py               Flask dev wrapper — runs backend locally on port 8000
-├── ibha_dump.sql                 Full PostgreSQL dump — import to set up the database
-├── README_ARCHITECTURE.md        System architecture and request flow
-├── README_FILES.md               This file — repo structure overview
-└── README_FEATURES.md            Features and problem statement (for judges)
+└── README.md                     Installation and local run guide
 ```
 
 ---
@@ -27,8 +25,11 @@ ibha-ksp/
 | `web/app/chat/page.tsx` | Chat route (`/chat`) |
 | `web/app/screens/auth/login.tsx` | Login page component — dark card, demo credentials |
 | `web/app/screens/chat/page.tsx` | Chat interface — message bubbles, FIR data table |
-| `web/app/screens/trends/page.tsx` | Crime trends — hotspot list, risk badges, monthly table |
-| `web/app/screens/network/page.tsx` | Network graph — canvas visualisation of accused links |
+| `web/app/screens/analytics/page.tsx` | Consolidated analytics — hotspots, trends, map, sociological charts |
+| `web/app/screens/investigations/page.tsx` | Consolidated investigation hub — graph, profile, decision support |
+| `web/app/screens/trends/page.tsx` | Legacy/standalone crime trends route |
+| `web/app/screens/network/page.tsx` | Legacy/standalone network graph route |
+| `web/app/components/map/CrimeHeatmap.tsx` | Leaflet/OpenStreetMap hotspot map |
 | `web/app/screens/admin/page.tsx` | Admin dashboard — stats cards, audit log table |
 | `web/app/components/layout/Navbar.tsx` | Sticky nav bar — logo, links, user info, logout |
 | `web/app/components/layout/BaseLayout.tsx` | Wraps all authed pages with Navbar + dark background |
@@ -43,9 +44,17 @@ ibha-ksp/
 | Path | What it is |
 |------|-----------|
 | `catalyst/functions/auth.py` | Login endpoint — verifies credentials, returns JWT |
-| `catalyst/functions/chat.py` | Chat endpoint — orchestrates NLP → SQL → response |
+| `catalyst/functions/chat.py` | Chat endpoint — orchestrates entity extraction, tool planning, tool execution, response |
 | `catalyst/functions/trends.py` | Hotspots and monthly trend aggregations |
 | `catalyst/functions/network.py` | Criminal network graph builder |
+| `catalyst/functions/decision_support.py` | Case summaries, similar cases, timelines, leads |
+| `catalyst/functions/profiling.py` | Accused risk/profile endpoint |
+| `catalyst/functions/sociological.py` | Demographic and sociological aggregates |
+| `catalyst/functions/financial.py` | Synthetic financial test data endpoint |
+| `catalyst/functions/agents/tools.py` | Registered safe tool-call handlers |
+| `catalyst/functions/agents/orchestrator.py` | OpenRouter-first intent/entity extraction with fallback |
+| `catalyst/functions/lib/openrouter_client.py` | OpenRouter client, tool planner, structured summary helpers |
+| `catalyst/functions/lib/embeddings.py` | Embedding and cosine similarity helpers |
 | `catalyst/functions/admin.py` | Audit logs and system stats endpoints |
 | `catalyst/functions/health.py` | Health check — `GET /health` |
 | `catalyst/functions/lib/nlp_simple.py` | Keyword intent parser — detects crime type, date range, etc. |
@@ -64,9 +73,12 @@ ibha-ksp/
 | File | What it is |
 |------|-----------|
 | `init_db.sql` | Creates all tables (CaseMaster, Accused, Victims, Unit, users) |
+| `ibha_dump.sql` | Full pg_dump of the local `ibha` database — use this to set up locally |
 | `seed_data.sql` | Inserts 35 sample FIRs + 6 demo users |
 | `schema_official_ksp.sql` | Full official KSP schema |
 | `schema.sql` | Simplified working schema |
+| `extensions_4-5-6.sql` | Case embeddings, risk cache, and analysis views |
+| `financial_test.sql` | Synthetic financial accounts and transactions for demo/testing |
 
 ---
 
@@ -86,6 +98,18 @@ ibha-ksp/
 | File | What it is |
 |------|-----------|
 | `local_server.py` | Flask wrapper — runs all Catalyst functions locally on port 8000 |
-| `ibha_dump.sql` | Full pg_dump of the ibha database — use this to set up locally |
 | `test_login.py` | Quick Python script to test the login endpoint |
+| `scripts/backfill_embeddings.py` | Backfills case embeddings after database import |
 | `START_IBHA.ps1` | PowerShell script to start backend + open browser |
+
+---
+
+## `docs/` — Public documentation
+
+| File | What it is |
+|------|-----------|
+| `docs/README_ARCHITECTURE.md` | System architecture and request flow |
+| `docs/README_FEATURES.md` | Features and problem statement |
+| `docs/README_FILES.md` | This file — repo structure overview |
+
+`docs/plan/` is intentionally ignored and reserved for private local planning notes.

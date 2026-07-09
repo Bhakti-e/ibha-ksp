@@ -252,3 +252,59 @@ Data:
     except Exception as e:
         log_info("Decision support JSON parse failed", {"error": str(e), "content": content[:300]})
     return None
+
+
+def plan_tool_calls_openrouter(query: str, tools: List[Dict], entities: Optional[Dict] = None, conversation: Optional[List[Dict]] = None) -> Optional[List[Dict]]:
+    """Ask the model to choose safe registered tools. Execution stays server-side."""
+    if not is_configured():
+        return None
+
+    hist = ""
+    if conversation:
+        for turn in conversation[-4:]:
+            hist += f"{turn.get('role','user')}: {str(turn.get('text',''))[:220]}\n"
+
+    prompt = f"""/no_think
+Choose backend tools for this police intelligence query. Return raw JSON only.
+Do not answer the user. Do not invent tool names. Use at most 4 tool calls.
+
+Query: {query}
+Conversation:
+{hist}
+Extracted entities:
+{json.dumps(entities or {}, default=str)}
+
+Available tools:
+{json.dumps(tools, default=str)}
+
+Return schema:
+{{"tool_calls":[{{"name":"registered_tool_name","args":{{}}}}]}}
+"""
+
+    content = chat_completion(
+        [
+            {"role": "system", "content": SYSTEM_POLICE},
+            {"role": "user", "content": prompt},
+        ],
+        model=AGENT_MODEL,
+        temperature=0.0,
+        max_tokens=700,
+    )
+    if not content:
+        return None
+    try:
+        start = content.find("{")
+        end = content.rfind("}") + 1
+        if start >= 0 and end > start:
+            obj = json.loads(content[start:end])
+            calls = obj.get("tool_calls") or []
+            clean = []
+            allowed = {t.get("name") for t in tools}
+            for call in calls:
+                name = call.get("name")
+                if name in allowed:
+                    clean.append({"name": name, "args": call.get("args") or {}})
+            return clean or None
+    except Exception as e:
+        log_info("OpenRouter tool planning failed", {"error": str(e), "content": content[:300]})
+    return None

@@ -11,12 +11,21 @@ interface Message {
   text: string;
   data?: any[];
   explanation?: any;
+  metadata?: any;
   timestamp: Date;
 }
 
 const getCaseNo = (row: any) => row.crimeno ?? row.CrimeNo ?? row.crime_no ?? '—';
 const getCaseDate = (row: any) => row.crimeregistereddate ?? row.CrimeRegisteredDate ?? row.crime_registered_date;
 const getCaseFacts = (row: any) => row.brieffacts ?? row.BriefFacts ?? row.brief_facts;
+const isCaseRow = (row: any) => Boolean(row?.crimeno ?? row?.CrimeNo ?? row?.crime_no ?? row?.case_number);
+const formatKey = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+const formatValue = (value: any) => {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'number') return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+  if (typeof value === 'object') return JSON.stringify(value).slice(0, 80);
+  return String(value);
+};
 
 const EXAMPLE_QUERIES = [
   'Show theft cases in last 12 months',
@@ -78,7 +87,7 @@ export default function ChatPage() {
       setMessages(p => [...p, {
         id: (Date.now()+1).toString(), type: 'assistant',
         text: res.answer, data: (res as any).data ?? [],
-        explanation: res.explanation_contract, timestamp: new Date(),
+        explanation: res.explanation_contract, metadata: (res as any).metadata, timestamp: new Date(),
       }]);
     } catch (e: any) {
       setMessages(p => [...p, {
@@ -234,41 +243,52 @@ export default function ChatPage() {
 
                   {/* FIR table */}
                   {msg.data && msg.data.length > 0 && (
-                    <div className="mt-3 overflow-hidden rounded border border-navy-border/60">
-                      <table className="data-table">
-                        <thead>
-                          <tr>
-                            <th className="w-[31%]">FIR No</th>
-                            <th className="w-[14%]">Date</th>
-                            <th className="w-[22%]">Station</th>
-                            <th className="w-[18%]">Crime Type</th>
-                            <th className="w-[15%]">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {msg.data.slice(0,10).map((row: any, i: number) => (
-                            <tr key={i}>
-                              <td className="font-mono text-accent break-all" title={getCaseNo(row)}>{getCaseNo(row)}</td>
-                              <td>{getCaseDate(row) ? new Date(getCaseDate(row)).toLocaleDateString('en-GB') : '—'}</td>
-                              <td className="truncate" title={row.stationname ?? row.StationName ?? '—'}>{row.stationname ?? row.StationName ?? '—'}</td>
-                              <td className="truncate" title={row.crimeheadname ?? row.CrimeHeadName ?? '—'}>{row.crimeheadname ?? row.CrimeHeadName ?? '—'}</td>
-                              <td><span className="badge badge-neutral normal-case tracking-normal">{row.status ?? row.Status ?? '—'}</span></td>
+                    isCaseRow(msg.data[0]) ? (
+                      <div className="mt-3 overflow-hidden rounded border border-navy-border/60">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th className="w-[31%]">FIR No</th>
+                              <th className="w-[14%]">Date</th>
+                              <th className="w-[22%]">Station</th>
+                              <th className="w-[18%]">Crime Type</th>
+                              <th className="w-[15%]">Status</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {msg.data.length === 1 && getCaseFacts(msg.data[0]) && (
-                        <div className="border-t border-navy-border/60 bg-surface-muted/70 p-3">
-                          <p className="text-2xs font-bold uppercase tracking-wider text-accent mb-1">Brief Facts</p>
-                          <p className="text-xs leading-relaxed text-ink-secondary whitespace-pre-wrap">{getCaseFacts(msg.data[0])}</p>
-                        </div>
-                      )}
-                      {msg.data.length > 10 && (
-                        <p className="px-4 py-2 text-2xs text-ink-muted bg-surface-muted">
-                          Showing 10 of {msg.data.length} records
-                        </p>
-                      )}
-                    </div>
+                          </thead>
+                          <tbody>
+                            {msg.data.slice(0,10).map((row: any, i: number) => (
+                              <tr key={i}>
+                                <td className="font-mono text-accent break-all" title={getCaseNo(row)}>{getCaseNo(row) !== '—' ? getCaseNo(row) : row.case_number ?? '—'}</td>
+                                <td>{getCaseDate(row) ? new Date(getCaseDate(row)).toLocaleDateString('en-GB') : '—'}</td>
+                                <td className="truncate" title={row.stationname ?? row.StationName ?? '—'}>{row.stationname ?? row.StationName ?? '—'}</td>
+                                <td className="truncate" title={row.crimeheadname ?? row.CrimeHeadName ?? row.crime_type ?? '—'}>{row.crimeheadname ?? row.CrimeHeadName ?? row.crime_type ?? '—'}</td>
+                                <td><span className="badge badge-neutral normal-case tracking-normal">{row.status ?? row.Status ?? '—'}</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {msg.data.length === 1 && getCaseFacts(msg.data[0]) && (
+                          <div className="border-t border-navy-border/60 bg-surface-muted/70 p-3">
+                            <p className="text-2xs font-bold uppercase tracking-wider text-accent mb-1">Brief Facts</p>
+                            <p className="text-xs leading-relaxed text-ink-secondary whitespace-pre-wrap">{getCaseFacts(msg.data[0])}</p>
+                          </div>
+                        )}
+                        {msg.data.length > 10 && <p className="px-4 py-2 text-2xs text-ink-muted bg-surface-muted">Showing 10 of {msg.data.length} records</p>}
+                      </div>
+                    ) : (
+                      <div className="mt-3 overflow-hidden rounded border border-navy-border/60">
+                        {(() => {
+                          const columns = Object.keys(msg.data[0] || {}).filter(k => !['embedding', 'brieffacts', 'case_description'].includes(k)).slice(0, 5);
+                          return (
+                            <table className="data-table">
+                              <thead><tr>{columns.map(col => <th key={col}>{formatKey(col)}</th>)}</tr></thead>
+                              <tbody>{msg.data.slice(0, 10).map((row: any, i: number) => <tr key={i}>{columns.map(col => <td key={col} className="truncate" title={formatValue(row[col])}>{formatValue(row[col])}</td>)}</tr>)}</tbody>
+                            </table>
+                          );
+                        })()}
+                        {msg.data.length > 10 && <p className="px-4 py-2 text-2xs text-ink-muted bg-surface-muted">Showing 10 of {msg.data.length} records</p>}
+                      </div>
+                    )
                   )}
 
                   {msg.explanation && (
@@ -276,6 +296,22 @@ export default function ChatPage() {
                       <summary className="text-xs text-ink-muted cursor-pointer select-none hover:text-accent">Query explanation ›</summary>
                       <div className="mt-2 text-xs text-ink-secondary bg-surface-muted rounded border border-navy-border/60 p-3 space-y-1">
                         {msg.explanation.reasoning_sketch?.map((s: string, i: number) => <p key={i}>· {s}</p>)}
+                      </div>
+                    </details>
+                  )}
+
+                  {msg.metadata?.tool_results?.length > 0 && (
+                    <details className="mt-2">
+                      <summary className="text-xs text-ink-muted cursor-pointer select-none hover:text-accent">Tools used ›</summary>
+                      <div className="mt-2 grid gap-1.5">
+                        {msg.metadata.tool_results.map((tool: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between gap-3 rounded border border-navy-border/50 bg-surface-muted px-2.5 py-1.5 text-2xs">
+                            <span className="font-bold text-accent">{tool.tool}</span>
+                            <span className={tool.ok ? 'text-ink-muted' : 'text-status-danger'}>
+                              {tool.ok ? `${tool.record_count ?? 0} records` : tool.error || 'failed'}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </details>
                   )}
