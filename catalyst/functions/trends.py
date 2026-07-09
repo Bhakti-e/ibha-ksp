@@ -98,6 +98,8 @@ def handler_hotspots(request):
                 "station_name": hotspot.get("station_name", "Unknown"),
                 "crime_count": crime_count,
                 "heinous_count": heinous_count,
+                "latitude": float(hotspot.get("latitude")) if hotspot.get("latitude") is not None else None,
+                "longitude": float(hotspot.get("longitude")) if hotspot.get("longitude") is not None else None,
                 "risk_level": risk_level,
                 "reason": reason,
                 "change_percentage": 0  # TODO: Calculate from historical data

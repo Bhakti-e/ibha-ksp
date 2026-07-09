@@ -19,7 +19,7 @@ function RiskBadge({ level }: { level: string }) {
 function HotspotBar({ count, max }: { count: number; max: number }) {
   const pct = max > 0 ? Math.round((count / max) * 100) : 0;
   return (
-    <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5">
+    <div className="w-full bg-navy-border/40 rounded-full h-1.5 mt-1.5">
       <div className="bg-accent h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
     </div>
   );
@@ -76,7 +76,7 @@ export default function TrendsPage() {
               className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                 days === d
                   ? 'bg-navy text-white'
-                  : 'bg-white text-ink-secondary border border-slate-200 hover:border-slate-300 hover:text-ink'
+                  : 'bg-surface-card text-ink-secondary border border-navy-border/60 hover:border-navy-border hover:text-ink'
               }`}>
               {d}d
             </button>
@@ -114,7 +114,7 @@ export default function TrendsPage() {
             {hotspots.length === 0 ? (
               <p className="px-5 py-8 text-sm text-ink-muted text-center">No hotspot data available</p>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-navy-border/40">
                 {hotspots.map((h, i) => (
                   <div key={h.station_id} className="px-5 py-4 hover:bg-surface-muted transition-colors">
                     <div className="flex items-center justify-between mb-1">

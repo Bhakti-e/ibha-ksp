@@ -22,14 +22,14 @@ export default function Navbar() {
   };
 
   const navLinks = [
-    { name: 'Chat', path: '/chat', icon: '💬' },
-    { name: 'Trends', path: '/screens/trends', icon: '📊' },
-    { name: 'Network', path: '/screens/network', icon: '🔗' },
+    { name: 'Chat', path: '/chat' },
+    { name: 'Trends', path: '/screens/trends' },
+    { name: 'Network', path: '/screens/network' },
   ];
 
   // Add Admin link for authorized roles
   if (user && ['Admin', 'SCRB_Analyst'].includes(user.role)) {
-    navLinks.push({ name: 'Admin', path: '/screens/admin', icon: '⚙️' });
+    navLinks.push({ name: 'Admin', path: '/screens/admin' });
   }
 
   return (
@@ -66,7 +66,6 @@ export default function Navbar() {
                       : 'text-foreground-muted hover:text-foreground hover:bg-card'
                   }`}
                 >
-                  <span className="mr-2">{link.icon}</span>
                   {link.name}
                 </button>
               );

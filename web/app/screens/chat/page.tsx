@@ -14,14 +14,20 @@ interface Message {
   timestamp: Date;
 }
 
+const getCaseNo = (row: any) => row.crimeno ?? row.CrimeNo ?? row.crime_no ?? '—';
+const getCaseDate = (row: any) => row.crimeregistereddate ?? row.CrimeRegisteredDate ?? row.crime_registered_date;
+const getCaseFacts = (row: any) => row.brieffacts ?? row.BriefFacts ?? row.brief_facts;
+
 const EXAMPLE_QUERIES = [
-  'Show theft cases in my station in last 30 days',
-  'How many murder cases this month?',
-  'List heinous crimes',
-  'Cases from January 2024',
+  'Show theft cases in last 12 months',
+  'How many murder cases last 12 months?',
+  'Show sociological breakdown last 12 months',
+  'Profile accused 13',
+  'Investigate case 31',
 ];
 
 const API_BASE = process.env.NEXT_PUBLIC_CATALYST_API_BASE_URL ?? 'http://localhost:8000/api/v1';
+const CHAT_STORAGE_KEY = 'ibha-chat-messages';
 
 export default function ChatPage() {
   const [messages,    setMessages]    = useState<Message[]>([]);
@@ -30,6 +36,7 @@ export default function ChatPage() {
   const [ocrLoading,  setOcrLoading]  = useState(false);
   const [user,        setUser]        = useState<any>(null);
   const [showOcr,     setShowOcr]     = useState(false);
+  const [isListening, setIsListening]  = useState(false);
   const bottomRef  = useRef<HTMLDivElement>(null);
   const fileRef    = useRef<HTMLInputElement>(null);
 
@@ -37,25 +44,37 @@ export default function ChatPage() {
     const u = getCurrentUser();
     if (!u) { window.location.href = '/login'; return; }
     setUser(u);
-    setMessages([{
-      id: '0', type: 'assistant',
-      text: `Good day, ${u.full_name}. You may query crime cases within your authorised jurisdiction.`,
-      timestamp: new Date(),
-    }]);
+    const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved).map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+        setMessages(parsed);
+        return;
+      } catch {
+        localStorage.removeItem(CHAT_STORAGE_KEY);
+      }
+    }
+    setMessages([{ id: '0', type: 'assistant', text: `Good day, ${u.full_name}. You may query crime cases within your authorised jurisdiction.`, timestamp: new Date() }]);
   }, []);
+
+  useEffect(() => {
+    if (messages.length > 0) localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+  }, [messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ── Text query ──────────────────────────────────────────────────────────
+  // ── Text query with conversation history for follow-up ───────────────
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
-    setMessages(p => [...p, { id: Date.now().toString(), type: 'user', text, timestamp: new Date() }]);
+    const userMsg: Message = { id: Date.now().toString(), type: 'user', text, timestamp: new Date() };
+    setMessages(p => [...p, userMsg]);
     setInput('');
     setLoading(true);
     try {
-      const res = await postChat({ query: text, mode: 'text', language: 'en' });
+      const conversation = [...messages, userMsg].slice(-6).map(m => ({ role: m.type === 'user' ? 'user' : 'assistant', text: m.text }));
+      const res = await postChat({ query: text, mode: 'text', language: 'en', conversation } as any);
       setMessages(p => [...p, {
         id: (Date.now()+1).toString(), type: 'assistant',
         text: res.answer, data: (res as any).data ?? [],
@@ -72,6 +91,45 @@ export default function ChatPage() {
     }
   };
 
+  const handleVoice = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Voice not supported in this browser. Use Chrome.');
+      return;
+    }
+    const rec = new SpeechRecognition();
+    rec.lang = 'en-IN';
+    rec.interimResults = false;
+    rec.onstart = () => setIsListening(true);
+    rec.onend = () => setIsListening(false);
+    rec.onresult = (ev: any) => {
+      const transcript = ev.results[0][0].transcript;
+      setInput(transcript);
+    };
+    rec.start();
+  };
+
+  const exportPDF = async () => {
+    const { default: jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(14);
+    doc.text(`IBHA Chat History - ${new Date().toLocaleString()}`, 10, 15);
+    let y = 25;
+    doc.setFontSize(10);
+    messages.forEach((m) => {
+      const prefix = m.type === 'user' ? 'User: ' : 'Ibha: ';
+      const lines = doc.splitTextToSize(prefix + m.text, 180);
+      if (y + lines.length*5 > 280) { doc.addPage(); y=15; }
+      doc.text(lines, 10, y);
+      y += lines.length*5 + 4;
+      if (m.data && m.data.length>0) {
+        doc.text(`  [${m.data.length} FIR rows]`, 10, y); y+=5;
+      }
+    });
+    doc.save(`ibha-chat-${Date.now()}.pdf`);
+  };
+
   // ── OCR upload ──────────────────────────────────────────────────────────
   const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,7 +140,7 @@ export default function ChatPage() {
 
     setMessages(p => [...p, {
       id: Date.now().toString(), type: 'user',
-      text: `📎 Uploaded document: ${file.name}`,
+      text: `Uploaded document: ${file.name}`,
       timestamp: new Date(),
     }]);
 
@@ -115,7 +173,7 @@ export default function ChatPage() {
         : e.response?.data?.error || 'OCR extraction failed';
       setMessages(p => [...p, {
         id: (Date.now()+1).toString(), type: 'assistant',
-        text: `⚠ ${msg}`, timestamp: new Date(),
+        text: `Warning: ${msg}`, timestamp: new Date(),
       }]);
     } finally {
       setOcrLoading(false);
@@ -133,38 +191,23 @@ export default function ChatPage() {
             <h1 className="page-title">Intelligence Chat</h1>
             {user && <p className="page-subtitle">{user.role} · Station {user.station_id ?? '—'}</p>}
           </div>
-          {/* OCR upload toggle */}
+          {/* Actions: OCR, Voice, PDF */}
           <div className="flex items-center gap-2">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*,.pdf"
-              className="hidden"
-              onChange={handleOcrUpload}
-            />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={ocrLoading}
-              title="Upload scanned FIR or document for OCR"
-              className="btn btn-secondary text-xs gap-1.5"
-            >
-              {ocrLoading
-                ? <><span className="spinner w-3.5 h-3.5" />Extracting…</>
-                : <>
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                    </svg>
-                    Upload Document
-                  </>
-              }
+            <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={handleOcrUpload} />
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={ocrLoading} title="Upload FIR for OCR" className="btn btn-secondary text-xs gap-1.5">
+              {ocrLoading ? <><span className="spinner w-3.5 h-3.5" />Extracting…</> : 'Upload'}
+            </button>
+            <button type="button" onClick={handleVoice} disabled={isListening} title="Voice input (EN/KN)" className={`btn text-xs gap-1.5 ${isListening?'btn-primary':'btn-secondary'}`}>
+              {isListening ? 'Listening…' : 'Voice'}
+            </button>
+            <button type="button" onClick={exportPDF} disabled={messages.length<=1} title="Save conversation as PDF locally" className="btn btn-secondary text-xs gap-1.5">
+              PDF
             </button>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+        <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-1">
           {messages.map(msg => (
             <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
 
@@ -172,9 +215,9 @@ export default function ChatPage() {
               {msg.type === 'ocr' ? (
                 <div className="max-w-2xl w-full card p-4 shadow-panel border-accent-border">
                   <p className="text-2xs font-semibold text-accent uppercase tracking-wider mb-2">
-                    📄 OCR Extracted Text
+                    OCR Extracted Text
                   </p>
-                  <pre className="text-xs text-ink whitespace-pre-wrap font-mono leading-relaxed bg-surface-muted rounded p-3 max-h-48 overflow-y-auto border border-slate-100">
+                  <pre className="text-xs text-ink whitespace-pre-wrap font-mono leading-relaxed bg-surface-muted rounded p-3 max-h-48 overflow-y-auto border border-navy-border/60">
                     {msg.text}
                   </pre>
                   <p className="text-2xs text-ink-muted mt-2">
@@ -182,34 +225,46 @@ export default function ChatPage() {
                   </p>
                 </div>
               ) : (
-                <div className={`max-w-2xl rounded px-4 py-3 text-sm shadow-card ${
+                <div className={`rounded px-4 py-3 text-sm shadow-card border ${
                   msg.type === 'user'
-                    ? 'bg-navy text-white rounded-br-none'
-                    : 'bg-white border border-slate-200 text-ink rounded-bl-none'
+                    ? 'max-w-md bg-accent text-[#160A0B] border-accent rounded-br-none'
+                    : 'w-full max-w-4xl bg-surface-card border-navy-border/60 text-ink rounded-bl-none'
                 }`}>
                   <p className="whitespace-pre-wrap">{msg.text}</p>
 
                   {/* FIR table */}
                   {msg.data && msg.data.length > 0 && (
-                    <div className="mt-3 overflow-x-auto rounded border border-slate-200">
+                    <div className="mt-3 overflow-hidden rounded border border-navy-border/60">
                       <table className="data-table">
                         <thead>
-                          <tr>{['FIR No','Date','Station','Crime Type','Status'].map(h => <th key={h}>{h}</th>)}</tr>
+                          <tr>
+                            <th className="w-[31%]">FIR No</th>
+                            <th className="w-[14%]">Date</th>
+                            <th className="w-[22%]">Station</th>
+                            <th className="w-[18%]">Crime Type</th>
+                            <th className="w-[15%]">Status</th>
+                          </tr>
                         </thead>
                         <tbody>
                           {msg.data.slice(0,10).map((row: any, i: number) => (
                             <tr key={i}>
-                              <td className="font-mono text-accent">{row.crimeno ?? row.CrimeNo ?? '—'}</td>
-                              <td>{row.crimeregistereddate ? new Date(row.crimeregistereddate).toLocaleDateString('en-GB') : '—'}</td>
-                              <td>{row.stationname ?? row.StationName ?? '—'}</td>
-                              <td>{row.crimeheadname ?? row.CrimeHeadName ?? '—'}</td>
-                              <td><span className="badge badge-neutral">{row.status ?? row.Status ?? '—'}</span></td>
+                              <td className="font-mono text-accent break-all" title={getCaseNo(row)}>{getCaseNo(row)}</td>
+                              <td>{getCaseDate(row) ? new Date(getCaseDate(row)).toLocaleDateString('en-GB') : '—'}</td>
+                              <td className="truncate" title={row.stationname ?? row.StationName ?? '—'}>{row.stationname ?? row.StationName ?? '—'}</td>
+                              <td className="truncate" title={row.crimeheadname ?? row.CrimeHeadName ?? '—'}>{row.crimeheadname ?? row.CrimeHeadName ?? '—'}</td>
+                              <td><span className="badge badge-neutral normal-case tracking-normal">{row.status ?? row.Status ?? '—'}</span></td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
+                      {msg.data.length === 1 && getCaseFacts(msg.data[0]) && (
+                        <div className="border-t border-navy-border/60 bg-surface-muted/70 p-3">
+                          <p className="text-2xs font-bold uppercase tracking-wider text-accent mb-1">Brief Facts</p>
+                          <p className="text-xs leading-relaxed text-ink-secondary whitespace-pre-wrap">{getCaseFacts(msg.data[0])}</p>
+                        </div>
+                      )}
                       {msg.data.length > 10 && (
-                        <p className="px-4 py-2 text-2xs text-ink-muted bg-slate-50">
+                        <p className="px-4 py-2 text-2xs text-ink-muted bg-surface-muted">
                           Showing 10 of {msg.data.length} records
                         </p>
                       )}
@@ -218,14 +273,16 @@ export default function ChatPage() {
 
                   {msg.explanation && (
                     <details className="mt-3">
-                      <summary className="text-xs text-ink-muted cursor-pointer select-none hover:text-ink">Query explanation ›</summary>
-                      <div className="mt-2 text-xs text-ink-secondary bg-slate-50 rounded border border-slate-200 p-3 space-y-1">
+                      <summary className="text-xs text-ink-muted cursor-pointer select-none hover:text-accent">Query explanation ›</summary>
+                      <div className="mt-2 text-xs text-ink-secondary bg-surface-muted rounded border border-navy-border/60 p-3 space-y-1">
                         {msg.explanation.reasoning_sketch?.map((s: string, i: number) => <p key={i}>· {s}</p>)}
                       </div>
                     </details>
                   )}
 
-                  <p className="text-2xs text-ink-muted/60 mt-2">{msg.timestamp.toLocaleTimeString()}</p>
+                  <p className={`text-2xs mt-2 ${msg.type === 'user' ? 'text-[#5E2505]/70' : 'text-ink-muted/70'}`}>
+                    {msg.timestamp.toLocaleTimeString()}
+                  </p>
                 </div>
               )}
             </div>
@@ -233,9 +290,9 @@ export default function ChatPage() {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-white border border-slate-200 rounded rounded-bl-none px-4 py-3 shadow-card flex gap-1">
+              <div className="bg-surface-card border border-navy-border/60 rounded rounded-bl-none px-4 py-3 shadow-card flex gap-1">
                 {[0,1,2].map(i => (
-                  <div key={i} className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"
+                  <div key={i} className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce"
                     style={{ animationDelay: `${i*0.15}s` }} />
                 ))}
               </div>
@@ -249,7 +306,7 @@ export default function ChatPage() {
           <div className="mt-4 flex flex-wrap gap-2">
             {EXAMPLE_QUERIES.map(q => (
               <button key={q} onClick={() => send(q)}
-                className="px-3 py-1.5 bg-white border border-slate-200 hover:border-accent hover:text-accent rounded text-xs text-ink-secondary transition-colors shadow-card">
+                className="px-3 py-1.5 bg-surface-card border border-navy-border/60 hover:border-accent hover:text-accent rounded text-xs text-ink-secondary transition-colors shadow-card">
                 {q}
               </button>
             ))}

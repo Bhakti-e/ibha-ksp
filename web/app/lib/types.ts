@@ -21,6 +21,7 @@ export interface ChatRequest {
   query: string;
   mode: 'text' | 'voice';
   language: 'en' | 'kn';
+  conversation?: Array<{ role: string; text: string }>;
 }
 
 export interface Citation {

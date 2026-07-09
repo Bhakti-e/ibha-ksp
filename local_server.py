@@ -26,12 +26,38 @@ import json
 # Add functions to path
 sys.path.insert(0, 'catalyst/functions')
 
-# Set database environment variables
-os.environ['DB_HOST'] = 'localhost'
-os.environ['DB_PORT'] = '5432'
-os.environ['DB_NAME'] = 'ibha'
-os.environ['DB_USER'] = 'atharva'
-os.environ['DB_PASSWORD'] = ''
+# Simple .env loader (no external deps) for OpenRouter + DB overrides
+def _load_dotenv():
+    env_path = os.path.join(os.path.dirname(__file__), '.env')
+    if not os.path.exists(env_path):
+        return
+    try:
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                if k and k not in os.environ:
+                    os.environ[k] = v
+    except Exception as e:
+        print(f"⚠️  .env load failed: {e}")
+
+_load_dotenv()
+
+# Set database environment variables (allow .env override)
+os.environ['DB_HOST'] = os.getenv('DB_HOST', 'localhost')
+os.environ['DB_PORT'] = os.getenv('DB_PORT', '5432')
+os.environ['DB_NAME'] = os.getenv('DB_NAME', 'ibha')
+os.environ['DB_USER'] = os.getenv('DB_USER', 'atharva')
+os.environ['DB_PASSWORD'] = os.getenv('DB_PASSWORD', '')
+
+if os.getenv('OPENROUTER_API_KEY'):
+    print(f"✅ OpenRouter configured (model={os.getenv('OPENROUTER_MODEL','meta-llama/llama-3.1-8b-instruct:free')})")
+else:
+    print("ℹ️  OpenRouter not configured — keyword NLP fallback will be used")
 
 # Import handlers
 try:
@@ -40,10 +66,47 @@ try:
     from trends import handler as trends_handler
     from network import handler as network_handler
     from admin import handler_audit_logs, handler_stats
-    print("✅ All handlers imported successfully")
+    print("✅ Core handlers imported successfully")
 except Exception as e:
-    print(f"❌ Error importing handlers: {e}")
+    print(f"❌ Error importing core handlers: {e}")
     sys.exit(1)
+
+# Optional extended handlers (sociological, profiling, decision-support, financial)
+try:
+    from sociological import handler as sociological_handler
+    SOCIOLOGICAL_AVAILABLE = True
+    print("✅ Sociological handler loaded")
+except Exception as e:
+    SOCIOLOGICAL_AVAILABLE = False
+    sociological_handler = None
+    print(f"ℹ️  Sociological not available yet: {e}")
+
+try:
+    from profiling import handler as profiling_handler
+    PROFILING_AVAILABLE = True
+    print("✅ Profiling handler loaded")
+except Exception as e:
+    PROFILING_AVAILABLE = False
+    profiling_handler = None
+    print(f"ℹ️  Profiling not available yet: {e}")
+
+try:
+    from decision_support import handler as decision_support_handler
+    DS_AVAILABLE = True
+    print("✅ Decision Support handler loaded")
+except Exception as e:
+    DS_AVAILABLE = False
+    decision_support_handler = None
+    print(f"ℹ️  Decision Support not available yet: {e}")
+
+try:
+    from financial import handler as financial_handler
+    FINANCIAL_AVAILABLE = True
+    print("✅ Financial test handler loaded")
+except Exception as e:
+    FINANCIAL_AVAILABLE = False
+    financial_handler = None
+    print(f"ℹ️  Financial test not available yet: {e}")
 
 # OCR handler — optional (requires torch + transformers)
 try:
@@ -167,6 +230,58 @@ def admin_stats():
         return parse_response(result)
     except Exception as e:
         print(f"❌ Admin stats error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/v1/sociological/<path:subpath>', methods=['GET', 'POST'])
+@app.route('/api/v1/sociological', methods=['GET', 'POST'])
+def sociological(subpath=""):
+    if not SOCIOLOGICAL_AVAILABLE:
+        return jsonify({"error": "Sociological module not yet implemented"}), 501
+    try:
+        request_obj = make_request_object(request)
+        request_obj['path'] = f"/sociological/{subpath}" if subpath else "/sociological"
+        result = sociological_handler(request_obj)
+        return parse_response(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/v1/profiling/<path:subpath>', methods=['GET', 'POST'])
+@app.route('/api/v1/profiling', methods=['GET', 'POST'])
+def profiling(subpath=""):
+    if not PROFILING_AVAILABLE:
+        return jsonify({"error": "Profiling module not yet implemented"}), 501
+    try:
+        request_obj = make_request_object(request, {'subpath': subpath})
+        request_obj['path'] = f"/profiling/{subpath}" if subpath else "/profiling"
+        result = profiling_handler(request_obj)
+        return parse_response(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/v1/decision-support/<path:subpath>', methods=['GET', 'POST'])
+@app.route('/api/v1/decision-support', methods=['GET', 'POST'])
+def decision_support(subpath=""):
+    if not DS_AVAILABLE:
+        return jsonify({"error": "Decision Support not yet implemented"}), 501
+    try:
+        request_obj = make_request_object(request)
+        request_obj['path'] = f"/decision-support/{subpath}" if subpath else "/decision-support"
+        result = decision_support_handler(request_obj)
+        return parse_response(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/v1/financial/<path:subpath>', methods=['GET', 'POST'])
+@app.route('/api/v1/financial', methods=['GET', 'POST'])
+def financial(subpath=""):
+    if not FINANCIAL_AVAILABLE:
+        return jsonify({"error": "Financial test not yet implemented"}), 501
+    try:
+        request_obj = make_request_object(request)
+        request_obj['path'] = f"/financial/{subpath}" if subpath else "/financial"
+        result = financial_handler(request_obj)
+        return parse_response(result)
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/health', methods=['GET'])

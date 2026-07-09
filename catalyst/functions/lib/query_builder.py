@@ -169,6 +169,39 @@ def build_count_query(
     return sql, tuple(params)
 
 
+def build_case_lookup_query(user_claims: dict, case_identifier: str) -> Tuple[str, tuple]:
+    """Build a focused lookup by CaseMasterID or CrimeNo/FIR number."""
+    sql = """
+        SELECT
+            cm.CaseMasterID,
+            cm.CrimeNo,
+            cm.CrimeRegisteredDate,
+            cm.BriefFacts,
+            cm.ModusOperandi,
+            csh.CrimeHeadName,
+            u.UnitName AS StationName,
+            cm.latitude,
+            cm.longitude,
+            CASE cm.CaseStatusID
+                WHEN 1 THEN 'Registered'
+                WHEN 2 THEN 'Under Investigation'
+                WHEN 3 THEN 'Charge Sheeted'
+                WHEN 4 THEN 'Closed'
+                ELSE 'Unknown'
+            END AS Status
+        FROM CaseMaster cm
+        LEFT JOIN CrimeSubHead csh ON cm.CrimeMinorHeadID = csh.CrimeSubHeadID
+        LEFT JOIN Unit u ON cm.PoliceStationID = u.UnitID
+        WHERE (cm.CrimeNo::text = %s OR cm.CaseMasterID::text = %s)
+    """
+
+    params = [case_identifier, case_identifier]
+    sql, params = apply_rls_filters(user_claims, sql, params)
+    sql += " ORDER BY cm.CrimeRegisteredDate DESC LIMIT 1"
+
+    return sql, tuple(params)
+
+
 def build_hotspots_query(
     user_claims: dict,
     days: int = 30
@@ -188,10 +221,14 @@ def build_hotspots_query(
             u.UnitID AS station_id,
             u.UnitName AS station_name,
             COUNT(*) AS crime_count,
-            COUNT(CASE WHEN cm.GravityOffenceID = 1 THEN 1 END) AS heinous_count
+            COUNT(CASE WHEN cm.GravityOffenceID = 1 THEN 1 END) AS heinous_count,
+            AVG(cm.latitude) FILTER (WHERE cm.latitude IS NOT NULL) AS latitude,
+            AVG(cm.longitude) FILTER (WHERE cm.longitude IS NOT NULL) AS longitude
         FROM CaseMaster cm
         JOIN Unit u ON cm.PoliceStationID = u.UnitID
-        WHERE cm.CrimeRegisteredDate >= CURRENT_DATE - INTERVAL '%s days'
+        WHERE cm.CrimeRegisteredDate >= (
+            SELECT MAX(CrimeRegisteredDate) FROM CaseMaster
+        ) - INTERVAL '%s days'
     """
     
     params = [days]
@@ -243,7 +280,7 @@ def build_trends_query(
     if user_claims.get("role") == "DSP":
         sql += " JOIN Unit u ON cm.PoliceStationID = u.UnitID"
     
-    sql += " WHERE cm.CrimeRegisteredDate >= CURRENT_DATE - INTERVAL '%s months'"
+    sql += " WHERE cm.CrimeRegisteredDate >= (SELECT MAX(CrimeRegisteredDate) FROM CaseMaster) - INTERVAL '%s months'"
     
     params = [months]
     

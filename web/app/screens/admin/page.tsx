@@ -115,7 +115,7 @@ export default function AdminPage() {
           <div className="section-header">
             <h2 className="section-title">Top Querying Users — Last 7 Days</h2>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-navy-border/40">
             {stats.top_querying_users.map((u: TopUser, i: number) => (
               <div key={u.user_id} className="px-5 py-3 flex items-center justify-between hover:bg-surface-muted transition-colors">
                 <div className="flex items-center gap-3">

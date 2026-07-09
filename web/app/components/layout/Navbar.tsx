@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 import { getCurrentUser } from '@/lib/api';
 
 const NAV_LINKS = [
-  { label: 'Intelligence Chat', path: '/chat'            },
-  { label: 'Trends',            path: '/screens/trends'  },
-  { label: 'Network',           path: '/screens/network' },
+  { label: 'Chat',           path: '/chat'                        },
+  { label: 'Analytics',      path: '/screens/analytics'           },
+  { label: 'Investigations', path: '/screens/investigations'      },
 ];
 const ADMIN_LINK = { label: 'Administration', path: '/screens/admin' };
 
