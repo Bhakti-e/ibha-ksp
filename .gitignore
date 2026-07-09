@@ -62,3 +62,4 @@ catalyst_config.json
 .cache/
 .temp/
 tmp/
+web/tsconfig.tsbuildinfo

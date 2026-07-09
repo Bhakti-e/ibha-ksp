@@ -76,7 +76,7 @@ def handler_audit_logs(request):
         # Build SQL query
         sql = """
             SELECT 
-                log_id,
+                id AS log_id,
                 user_id,
                 role,
                 station_id,
@@ -85,7 +85,7 @@ def handler_audit_logs(request):
                 intent,
                 filters_applied,
                 result_count,
-                timestamp
+                ts AS timestamp
             FROM audit_logs
             WHERE 1=1
         """
@@ -97,11 +97,11 @@ def handler_audit_logs(request):
             query_params.append(filter_user_id)
         
         if from_date:
-            sql += " AND timestamp >= %s"
+            sql += " AND ts >= %s"
             query_params.append(from_date)
         
         if to_date:
-            sql += " AND timestamp <= %s"
+            sql += " AND ts <= %s"
             query_params.append(to_date)
         
         sql += " ORDER BY timestamp DESC LIMIT %s"
@@ -208,7 +208,7 @@ def handler_stats(request):
         # Queries today
         try:
             result = db.execute_query(
-                "SELECT COUNT(*) AS count FROM audit_logs WHERE timestamp >= CURRENT_DATE"
+                "SELECT COUNT(*) AS count FROM audit_logs WHERE ts >= CURRENT_DATE"
             )
             stats["total_queries_today"] = result[0]["count"] if result else 0
         except:
@@ -219,7 +219,7 @@ def handler_stats(request):
             result = db.execute_query("""
                 SELECT user_id, COUNT(*) AS query_count
                 FROM audit_logs
-                WHERE timestamp >= CURRENT_DATE - INTERVAL '7 days'
+                WHERE ts >= CURRENT_DATE - INTERVAL '7 days'
                 GROUP BY user_id
                 ORDER BY query_count DESC
                 LIMIT 5

@@ -30,8 +30,8 @@ sys.path.insert(0, 'catalyst/functions')
 os.environ['DB_HOST'] = 'localhost'
 os.environ['DB_PORT'] = '5432'
 os.environ['DB_NAME'] = 'ibha'
-os.environ['DB_USER'] = 'postgres'
-os.environ['DB_PASSWORD'] = 'yeet'
+os.environ['DB_USER'] = 'atharva'
+os.environ['DB_PASSWORD'] = ''
 
 # Import handlers
 try:

@@ -63,7 +63,7 @@ export default function NetworkPage() {
           </button>
         </form>
         <p className="text-2xs text-ink-muted mt-2">
-          Sample IDs from seed data: 1 (Ravi Kumar), 2 (Deepak Shetty), 3, 4
+          Tip: IDs with co-accused connections — 13 (Anil Patil), 5 (Mukesh Singh), 8 (Ramesh Babu), 11 (Vijay Kumar)
         </p>
       </div>
 

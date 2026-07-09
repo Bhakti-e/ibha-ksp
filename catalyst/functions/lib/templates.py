@@ -7,6 +7,26 @@ NO external LLM - all responses are template-based.
 """
 
 from typing import List, Dict
+from datetime import date, datetime
+from decimal import Decimal
+
+
+def _serialize_rows(rows: List[dict]) -> List[dict]:
+    """Convert non-JSON-native objects (dates, Decimals) for serialization."""
+    serialized = []
+    for row in rows:
+        clean = {}
+        for k, v in (row or {}).items():
+            if isinstance(v, datetime):
+                clean[k.lower()] = v.isoformat()
+            elif isinstance(v, date):
+                clean[k.lower()] = v.isoformat()
+            elif isinstance(v, Decimal):
+                clean[k.lower()] = float(v) if v.is_finite() else None
+            else:
+                clean[k.lower()] = v
+        serialized.append(clean)
+    return serialized
 
 
 def format_answer_search(data: List[dict], entities: dict, language: str = 'en') -> dict:
@@ -54,12 +74,15 @@ def format_answer_search(data: List[dict], entities: dict, language: str = 'en')
         else:
             answer_text = f"ಕಳೆದ {days} ದಿನಗಳಲ್ಲಿ {count} {crime_type} ಪ್ರಕರಣಗಳು ಕಂಡುಬಂದಿವೆ."
     
+    # Normalize rows (lowercase keys + serialize dates)
+    rows = _serialize_rows(data)
+
     # Extract citations (FIR numbers)
-    citations = [row.get("crimeno") or row.get("CrimeNo") for row in data]
-    
+    citations = [row.get("crimeno") or row.get("CrimeNo") for row in rows]
+
     return {
         "answer_text": answer_text,
-        "data_rows": data,
+        "data_rows": rows,
         "citations": citations
     }
 
