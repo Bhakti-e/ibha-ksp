@@ -104,7 +104,7 @@ def handler_audit_logs(request):
             sql += " AND ts <= %s"
             query_params.append(to_date)
         
-        sql += " ORDER BY timestamp DESC LIMIT %s"
+        sql += " ORDER BY ts DESC LIMIT %s"
         query_params.append(limit)
         
         # Execute query

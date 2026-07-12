@@ -29,6 +29,9 @@ def handler(request):
     case_id = qp.get("case_id") or qp.get("caseId")
     if "accounts" in path:
         rows = _safe("SELECT * FROM accounts ORDER BY id")
+        if rows == [] and not _safe("SELECT 1 FROM information_schema.tables WHERE table_name = 'accounts'"):
+            return {"statusCode": 503, "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
+                    "body": json.dumps({"error": "Financial tables not yet initialized.", "fix": "Run: psql -d ibha -f catalyst/datastore/financial_test.sql", "accounts": [], "test_data": True})}
         # serialize decimals/dates
         clean=[]
         for r in rows:

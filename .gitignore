@@ -17,7 +17,8 @@ out/
 
 # Environment Variables (NEVER commit these)
 .env
-.env.example
+# .env.example is intentionally committed as a sanitized template — do NOT ignore it
+# .env.example
 .env.local
 .env.development.local
 .env.test.local

@@ -1,0 +1,35 @@
+{
+  "_comment": "Zoho Catalyst AppSail configuration for Ibha KSP backend (Flask).",
+  "_docs": "https://catalyst.zoho.com/help/appsail.html",
+
+  "service_name": "ibha-ksp-backend",
+  "runtime": "python3.11",
+  "root_dir": ".",
+  "entry_point": "local_server:app",
+
+  "build_command": "pip install flask flask-cors psycopg2-binary pydantic requests llama-index-core sentence-transformers chromadb",
+  "start_command": "gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 local_server:app",
+
+  "env_vars_required": [
+    "DB_HOST",
+    "DB_PORT",
+    "DB_NAME",
+    "DB_USER",
+    "DB_PASSWORD",
+    "JWT_SECRET"
+  ],
+  "env_vars_optional": [
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_MODEL",
+    "OPENROUTER_FALLBACK_MODEL"
+  ],
+
+  "notes": [
+    "The Flask app object is named 'app' in local_server.py.",
+    "gunicorn must be added to requirements if not already installed.",
+    "For AppSail, set all env vars in the Catalyst Console under AppSail > Environment Variables.",
+    "The database must be a reachable PostgreSQL instance (Catalyst DataStore does not support direct psycopg2 connections; use Neon, Supabase, or Elephant SQL as the hosted Postgres).",
+    "Run scripts/ingest_rag.py once after deployment to populate the ChromaDB vector store.",
+    "ChromaDB persists to ./chroma_db/; on AppSail this is ephemeral — consider using ChromaDB cloud or pgvector instead for production."
+  ]
+}

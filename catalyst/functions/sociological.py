@@ -42,6 +42,18 @@ def handler_demographics(request):
         return {"statusCode": 401, "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}, "body": json.dumps({"error": str(e)})}
 
     age = _safe_query("SELECT * FROM vw_age_buckets")
+    # If views don't exist yet, return a clear setup message
+    if age is None or (not age and _safe_query("SELECT 1 FROM information_schema.views WHERE table_name = 'vw_age_buckets'") == []):
+        return {
+            "statusCode": 503,
+            "headers": {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
+            "body": json.dumps({
+                "error": "Sociological views not yet initialized on this database.",
+                "fix": "Run: psql -d ibha -f catalyst/datastore/extensions_4-5-6.sql",
+                "age_buckets": [], "gender": [], "unit_type": [], "hourly": [],
+                "total_accused": 0, "age_stats": {}
+            })
+        }
     gender = _safe_query("SELECT COALESCE(genderid, 0) as gender_id, COUNT(*) as count FROM accused GROUP BY genderid")
     unit_type = _safe_query("SELECT * FROM vw_crime_by_unit_type")
     hourly = _safe_query("SELECT * FROM vw_hourly_crime ORDER BY hour_of_day")
