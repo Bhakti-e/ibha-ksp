@@ -117,6 +117,26 @@ except Exception as e:
     OCR_AVAILABLE = False
     print(f"⚠️  OCR handler not available (install torch + transformers): {e}")
 
+# RAG handler — optional (requires chromadb + sentence-transformers)
+try:
+    from rag_service import handler as rag_handler, ingest_documents, _get_collection
+    RAG_AVAILABLE = True
+    # Auto-ingest if collection is empty
+    try:
+        col = _get_collection()
+        if col.count() == 0:
+            print("🔄  RAG collection empty — auto-ingesting documents…")
+            result = ingest_documents()
+            print(f"✅  RAG ingested {result.get('ingested',0)} docs → {result.get('total_chunks',0)} chunks")
+        else:
+            print(f"✅  RAG handler ready ({col.count()} chunks in store)")
+    except Exception as ingest_err:
+        print(f"⚠️  RAG auto-ingest skipped: {ingest_err}")
+except Exception as e:
+    RAG_AVAILABLE = False
+    rag_handler = None
+    print(f"ℹ️  RAG not available (install chromadb): {e}")
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend
 
@@ -283,6 +303,30 @@ def financial(subpath=""):
         return parse_response(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/v1/rag/query', methods=['POST'])
+def rag_query():
+    """RAG document search endpoint"""
+    if not RAG_AVAILABLE:
+        return jsonify({"error": "RAG not available. Install: pip install chromadb"}), 503
+    try:
+        request_obj = make_request_object(request)
+        result = rag_handler(request_obj)
+        return parse_response(result)
+    except Exception as e:
+        print(f"❌ RAG query error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/v1/rag/status', methods=['GET'])
+def rag_status():
+    """RAG status — number of chunks indexed"""
+    if not RAG_AVAILABLE:
+        return jsonify({"available": False, "chunks": 0}), 200
+    try:
+        col = _get_collection()
+        return jsonify({"available": True, "chunks": col.count(), "collection": col.name}), 200
+    except Exception as e:
+        return jsonify({"available": False, "chunks": 0, "error": str(e)}), 200
 
 @app.route('/health', methods=['GET'])
 def health():

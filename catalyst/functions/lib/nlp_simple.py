@@ -177,9 +177,9 @@ def extract_date_range(query: str, language: str = 'en') -> tuple:
                 start_date = today - timedelta(days=days)
                 return start_date.strftime('%Y-%m-%d'), None
     
-    # Default: last 30 days
-    start_date = today - timedelta(days=30)
-    return start_date.strftime('%Y-%m-%d'), None
+    # No date keyword found — return None so the query returns all cases
+    # (avoids filtering out seed data that predates the current date)
+    return None, None
 
 
 def extract_location_scope(query: str) -> str:

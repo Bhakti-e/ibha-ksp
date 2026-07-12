@@ -1,0 +1,41 @@
+CRIME PATTERN ANALYSIS REPORT
+Bengaluru Urban District — December 2025
+Prepared by: State Crime Records Bureau (SCRB)
+Date: 2026-01-08
+
+EXECUTIVE SUMMARY:
+December 2025 saw a 22% increase in property crimes across Bengaluru Urban District
+compared to November 2025. Vehicle thefts accounted for 38% of all property crimes.
+Cyber fraud cases rose sharply by 45% with most victims in the 35-55 age group.
+
+HOTSPOT ANALYSIS:
+1. Whitefield Zone (HIGH RISK):
+   - 12 assault cases (up from 5 in Nov 2025)
+   - Pattern: Evening hours (18:00 - 22:00), near bus stops and metro stations
+   - Suspect profile: Opportunistic robbers, groups of 2
+
+2. Koramangala Zone (MEDIUM-HIGH RISK):
+   - 8 vehicle thefts, 4 cyber fraud cases
+   - Vehicle theft pattern: Parking areas near restaurants/clubs, 21:00-23:00
+   - Cyber fraud: KYC phishing calls, targeting IT professionals
+
+3. HSR Layout Zone (MEDIUM RISK):
+   - Drug-related arrests: 3 cases
+   - Primarily cannabis and synthetic drugs
+   - College/tech park proximity is a risk factor
+
+MODUS OPERANDI PATTERNS:
+- Vehicle theft gang possibly operating across multiple zones
+- CCTV footage from 3 different locations shows similar vehicle descriptions
+- Cyber fraud callers using spoofed SBI/HDFC numbers — potential call centre operation
+
+RECOMMENDATIONS:
+1. Increase foot patrol near Whitefield bus stops between 18:00-22:00
+2. Deploy CCTV monitoring at identified vehicle theft hotspots
+3. Coordinate with Cyber Crime Cell for financial tracking of fraud proceeds
+4. Establish informant network near BTM Layout drug corridor
+
+SEASONAL TREND:
+December traditionally sees 15-20% increase in property crimes due to holiday gatherings,
+increased cash transactions, and reduced police visibility. This year's spike (22%)
+is above the historical average and warrants enhanced surveillance.

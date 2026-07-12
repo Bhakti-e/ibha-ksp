@@ -1,0 +1,32 @@
+FIRST INFORMATION REPORT
+FIR Number: KOR/042/2025
+Date: 2025-12-20
+Police Station: Koramangala Police Station, Bengaluru Urban District
+
+COMPLAINANT:
+Name: Ramesh Iyer
+Address: 12, 5th Cross, Indiranagar, Bengaluru - 560038
+
+NATURE OF OFFENCE: Online Fraud / Cyber Crime (IT Act Section 66C, 66D; IPC 420)
+
+BRIEF FACTS:
+On 18-Dec-2025, complainant Ramesh Iyer received a phone call from an individual
+claiming to be from the "KYC Verification Department of State Bank of India." The
+caller stated his account would be blocked unless he verified his OTP. Complainant,
+believing the call to be genuine, shared the OTP. Within minutes, Rs. 87,500 was
+debited from his savings account via NEFT transfer to an account in Rajasthan.
+
+TRANSACTION DETAILS:
+- Amount: Rs. 87,500
+- Beneficiary Account: XXXX-XXXX-4521 (Rajasthan-based bank, further investigation pending)
+- Transaction Reference: NEFT/2025/DEC/88741
+- Time: 14:32:18 IST on 18-Dec-2025
+
+MODUS OPERANDI:
+Classic vishing (voice phishing) attack. Accused impersonated bank official.
+Spoofed caller ID to display a number similar to SBI customer care.
+Similar complaints received from 4 other complainants in Bengaluru in December 2025.
+Money mule network suspected in Rajasthan.
+
+STATUS: Under Investigation - Cyber Crime Cell referred
+SECTIONS INVOKED: IT Act 66C, 66D, IPC 420, IPC 120B (Criminal conspiracy)
