@@ -1,11 +1,24 @@
 """Handler unit tests — run without a live database."""
 import sys, os, json, hmac, hashlib, base64
-sys.path.insert(0, 'catalyst/functions')
-os.environ.setdefault('DB_HOST','localhost')
-os.environ.setdefault('DB_PORT','5432')
-os.environ.setdefault('DB_NAME','ibha')
-os.environ.setdefault('DB_USER','postgres')
-os.environ.setdefault('DB_PASSWORD','yeet')
+
+# Load .env.backend from project root (override=False so CI env vars win)
+_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(_root, ".env.backend"), override=False)
+except ImportError:
+    pass
+
+sys.path.insert(0, os.path.join(_root, "catalyst", "functions"))
+
+# Safe fallbacks for CI environments where .env.backend may not exist.
+# DB_PASSWORD has no default — tests that don't need a live DB will still pass.
+os.environ.setdefault("DB_HOST",        "localhost")
+os.environ.setdefault("DB_PORT",        "5432")
+os.environ.setdefault("DB_NAME",        "ibha")
+os.environ.setdefault("DB_USER",        "postgres")
+os.environ.setdefault("DB_SSLMODE",     "prefer")
+os.environ.setdefault("USE_CATALYST_DS","false")
 
 results = []
 failures = []
