@@ -18,10 +18,13 @@ out/
 # Environment Variables (NEVER commit these)
 .env
 .env.local
+.env.backend
+.env.production
 .env.development.local
 .env.test.local
 .env.production.local
-# DO commit .env.example
+*.env
+# DO commit *.example files (they contain only placeholders)
 
 # IDE
 .vscode/
