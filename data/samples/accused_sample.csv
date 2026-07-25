@@ -1,0 +1,13 @@
+# Stub sample data – replace with official KSP Datathon 2026 dataset
+# This file matches the official Accused table schema from Police-FIR-ER-Diagram.pdf
+AccusedMasterID,CaseMasterID,AccusedName,AgeYear,GenderID,PersonID
+1,1,Ravi Kumar,32,1,A1
+2,2,Sanjay Reddy,28,1,A1
+3,4,Mukesh Singh,25,1,A1
+4,4,Suresh Yadav,27,1,A2
+5,5,Prakash Gowda,35,1,A1
+6,6,Deepak Kumar,22,1,A1
+7,7,Ravi Kumar,32,1,A1
+8,8,Unknown,,,A1
+9,10,Ramesh Babu,40,1,A1
+10,9,Vikram Malhotra,29,1,A1

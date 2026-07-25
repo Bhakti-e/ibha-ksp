@@ -1,0 +1,259 @@
+{
+  "access_control_policies": {
+    "version": "0.1.0",
+    "description": "Role-Based Access Control (RBAC) and Row-Level Security (RLS) policies for Ibha",
+    
+    "rbac_policies": [
+      {
+        "policy_id": "endpoint_access",
+        "description": "Map roles to allowed API endpoints",
+        "rules": [
+          {
+            "role": "Constable",
+            "allowed_endpoints": ["/health", "/chat", "/audit"],
+            "denied_endpoints": ["/ingest/*", "/admin/*"]
+          },
+          {
+            "role": "SI",
+            "allowed_endpoints": ["/health", "/chat", "/audit"],
+            "denied_endpoints": ["/ingest/*", "/admin/*"]
+          },
+          {
+            "role": "Inspector",
+            "allowed_endpoints": ["/health", "/chat", "/audit"],
+            "denied_endpoints": ["/ingest/*", "/admin/*"]
+          },
+          {
+            "role": "DSP",
+            "allowed_endpoints": ["/health", "/chat", "/audit"],
+            "denied_endpoints": ["/ingest/*", "/admin/*"]
+          },
+          {
+            "role": "SCRB_Analyst",
+            "allowed_endpoints": ["/health", "/chat", "/audit", "/ingest/*"],
+            "denied_endpoints": ["/admin/users", "/admin/roles"]
+          },
+          {
+            "role": "Admin",
+            "allowed_endpoints": ["/*"],
+            "denied_endpoints": []
+          }
+        ],
+        "enforcement": "API Gateway + Serverless Function auth checks"
+      }
+    ],
+    
+    "rls_policies": [
+      {
+        "policy_id": "station_level_rls",
+        "description": "Constable can only see data from their assigned station",
+        "applies_to_roles": ["Constable"],
+        "filter": {
+          "field": "station_id",
+          "operator": "equals",
+          "value": "${user.station_id}"
+        },
+        "applies_to_tables": ["firs", "accused", "victims", "locations", "documents_pending", "documents"],
+        "enforcement": "enforce_rls() function in auth_utils.py"
+      },
+      {
+        "policy_id": "station_cluster_rls",
+        "description": "SI and Inspector can see data from their station + nearby stations",
+        "applies_to_roles": ["SI", "Inspector"],
+        "filter": {
+          "field": "station_id",
+          "operator": "in",
+          "value": "${user.station_cluster}"
+        },
+        "applies_to_tables": ["firs", "accused", "victims", "locations", "documents_pending", "documents"],
+        "enforcement": "enforce_rls() function in auth_utils.py",
+        "note": "TODO: Define station_cluster in user profile or configuration table"
+      },
+      {
+        "policy_id": "district_level_rls",
+        "description": "DSP can see all data from their assigned district",
+        "applies_to_roles": ["DSP"],
+        "filter": {
+          "field": "district_id",
+          "operator": "equals",
+          "value": "${user.district_id}"
+        },
+        "applies_to_tables": ["firs", "accused", "victims", "locations", "documents_pending", "documents"],
+        "enforcement": "enforce_rls() function in auth_utils.py"
+      },
+      {
+        "policy_id": "state_wide_rls",
+        "description": "SCRB_Analyst and Admin have state-wide access (no filtering)",
+        "applies_to_roles": ["SCRB_Analyst", "Admin"],
+        "filter": null,
+        "applies_to_tables": ["*"],
+        "enforcement": "enforce_rls() function returns unfiltered query"
+      },
+      {
+        "policy_id": "sensitivity_rls",
+        "description": "Filter data based on user clearance level and document sensitivity",
+        "applies_to_roles": ["*"],
+        "rules": [
+          {
+            "user_clearance": "NORMAL",
+            "can_access_sensitivity": ["NORMAL"]
+          },
+          {
+            "user_clearance": "CONFIDENTIAL",
+            "can_access_sensitivity": ["NORMAL", "CONFIDENTIAL"]
+          },
+          {
+            "user_clearance": "RESTRICTED",
+            "can_access_sensitivity": ["NORMAL", "CONFIDENTIAL", "RESTRICTED"]
+          }
+        ],
+        "applies_to_tables": ["firs", "documents_pending", "documents"],
+        "enforcement": "Add sensitivity filter in enforce_rls() based on user clearance",
+        "note": "TODO: Add clearance_level field to users table"
+      }
+    ],
+    
+    "audit_policies": [
+      {
+        "policy_id": "log_all_queries",
+        "description": "Log all chat queries and answers to audit_logs table",
+        "applies_to_roles": ["*"],
+        "log_fields": ["user_id", "query", "query_hash", "tool_trail", "citations", "answer_hash", "confidence", "timestamp"],
+        "retention_days": 1825,
+        "note": "5-year retention for compliance"
+      },
+      {
+        "policy_id": "log_ingestion_actions",
+        "description": "Log all document ingestion actions (upload, approve, reject, index)",
+        "applies_to_roles": ["SCRB_Analyst", "Admin"],
+        "log_fields": ["document_id", "action", "performed_by", "details_json", "timestamp"],
+        "retention_days": 3650,
+        "note": "10-year retention for document lifecycle tracking"
+      },
+      {
+        "policy_id": "log_admin_actions",
+        "description": "Log all administrative actions (user management, role changes, config updates)",
+        "applies_to_roles": ["Admin"],
+        "log_fields": ["action_type", "target_user_id", "changes_json", "performed_by", "timestamp"],
+        "retention_days": 3650,
+        "note": "TODO: Implement admin_actions_audit table"
+      }
+    ],
+    
+    "rate_limiting_policies": [
+      {
+        "policy_id": "chat_rate_limit",
+        "description": "Limit chat queries to prevent abuse",
+        "applies_to_endpoints": ["/chat"],
+        "limits": [
+          {
+            "role": "Constable",
+            "requests_per_minute": 60,
+            "requests_per_hour": 500
+          },
+          {
+            "role": "SI",
+            "requests_per_minute": 80,
+            "requests_per_hour": 800
+          },
+          {
+            "role": "Inspector",
+            "requests_per_minute": 100,
+            "requests_per_hour": 1000
+          },
+          {
+            "role": "DSP",
+            "requests_per_minute": 100,
+            "requests_per_hour": 1200
+          },
+          {
+            "role": "SCRB_Analyst",
+            "requests_per_minute": 120,
+            "requests_per_hour": 1500
+          },
+          {
+            "role": "Admin",
+            "requests_per_minute": 150,
+            "requests_per_hour": 2000
+          }
+        ],
+        "enforcement": "API Gateway rate limiting",
+        "note": "Higher-ranking officers get higher limits for operational flexibility"
+      },
+      {
+        "policy_id": "ingestion_rate_limit",
+        "description": "Limit document uploads to prevent system overload",
+        "applies_to_endpoints": ["/ingest/upload"],
+        "limits": [
+          {
+            "role": "SCRB_Analyst",
+            "requests_per_hour": 50,
+            "requests_per_day": 200
+          },
+          {
+            "role": "Admin",
+            "requests_per_hour": 100,
+            "requests_per_day": 500
+          }
+        ],
+        "enforcement": "API Gateway rate limiting"
+      }
+    ],
+    
+    "data_export_policies": [
+      {
+        "policy_id": "pdf_export_policy",
+        "description": "Control who can export conversation history to PDF",
+        "applies_to_roles": ["*"],
+        "rules": [
+          {
+            "role": "Constable",
+            "max_exports_per_day": 10,
+            "watermark_required": true
+          },
+          {
+            "role": "SI",
+            "max_exports_per_day": 20,
+            "watermark_required": true
+          },
+          {
+            "role": "Inspector",
+            "max_exports_per_day": 30,
+            "watermark_required": true
+          },
+          {
+            "role": "DSP",
+            "max_exports_per_day": 50,
+            "watermark_required": true
+          },
+          {
+            "role": "SCRB_Analyst",
+            "max_exports_per_day": 100,
+            "watermark_required": true
+          },
+          {
+            "role": "Admin",
+            "max_exports_per_day": null,
+            "watermark_required": false
+          }
+        ],
+        "enforcement": "SmartBrowz PDF generation with watermark",
+        "watermark_text": "Confidential - ${user.name} - ${user.station_id} - ${date}",
+        "note": "Watermark deters unauthorized sharing"
+      }
+    ]
+  },
+  
+  "TODO": [
+    "Implement RBAC checks in API Gateway",
+    "Implement RLS filtering in all Data Store queries",
+    "Add clearance_level field to users table",
+    "Define station_cluster mapping for SI/Inspector roles",
+    "Implement rate limiting in API Gateway",
+    "Implement PDF export with watermarking using SmartBrowz",
+    "Add admin_actions_audit table for admin activity logging",
+    "Test all policies with sample users from each role",
+    "Document policy enforcement architecture",
+    "Create monitoring dashboard for policy violations"
+  ]
+}

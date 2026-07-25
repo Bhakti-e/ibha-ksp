@@ -1,0 +1,85 @@
+{
+  "cron_job_name": "Nightly Document Indexing",
+  "description": "Batch-index approved documents into QuickML RAG. This ensures controlled, scheduled updates to the knowledge base without continuous retraining.",
+  "version": "0.1.0",
+  
+  "schedule": {
+    "cron_expression": "0 3 * * *",
+    "timezone": "Asia/Kolkata",
+    "description": "Runs daily at 3:00 AM IST (after analytics update at 2 AM)"
+  },
+  
+  "target_function": {
+    "name": "ingest_index",
+    "type": "serverless_function",
+    "path": "catalyst/functions/ingest_index.py",
+    "note": "This function is already implemented in ingest_index.py"
+  },
+  
+  "purpose": [
+    "Query Data Store for approved, non-indexed documents",
+    "Extract text content and metadata",
+    "Send to QuickML RAG for indexing",
+    "Mark documents as indexed in Data Store",
+    "Log results in ingestion_audit table"
+  ],
+  
+  "batch_configuration": {
+    "max_documents_per_run": 100,
+    "note": "Process in batches to avoid timeouts. If more than 100 documents are pending, next run will process the rest."
+  },
+  
+  "monitoring": {
+    "success_notification": {
+      "enabled": true,
+      "recipients": ["admin.system@ksp.gov.in"],
+      "service": "Catalyst Mail",
+      "conditions": {
+        "send_if_indexed_count_gt": 0
+      },
+      "template": "Nightly indexing completed. {indexed_count} documents indexed. {errors_count} errors."
+    },
+    "failure_notification": {
+      "enabled": true,
+      "recipients": ["admin.system@ksp.gov.in"],
+      "service": "Catalyst Mail"
+    },
+    "metrics": [
+      "execution_time_seconds",
+      "documents_indexed",
+      "documents_failed",
+      "average_indexing_time_per_document"
+    ]
+  },
+  
+  "timeout_seconds": 1800,
+  "note": "Indexing job can run for up to 30 minutes",
+  
+  "error_handling": {
+    "strategy": "continue_on_error",
+    "description": "If a single document fails to index, log the error and continue with remaining documents",
+    "retry_policy": {
+      "max_retries_per_document": 3,
+      "retry_delay_seconds": 10
+    }
+  },
+  
+  "why_nightly_batch": [
+    "Prevents continuous model retraining (AI does not learn from every upload immediately)",
+    "Allows human review before knowledge base update (quality control)",
+    "Reduces computational load by batching operations",
+    "Provides a clear audit trail (when each document was indexed)",
+    "Enables rollback if bad data is detected (by removing from index)",
+    "Aligns with police workflow (documents uploaded during day, indexed at night)"
+  ],
+  
+  "TODO": [
+    "Test ingest_index.py function with sample documents",
+    "Verify QuickML RAG API integration",
+    "Test batch processing with >100 documents",
+    "Configure Catalyst Mail for notifications",
+    "Add monitoring dashboard for indexing metrics",
+    "Test error handling and retry logic",
+    "Document rollback procedure for bad indexing runs"
+  ]
+}
