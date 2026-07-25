@@ -11,10 +11,11 @@ import json
 import hmac
 import hashlib
 import base64
+import os
 from datetime import datetime
 
-# Secret key must match auth.py
-SECRET_KEY = "ibha_ksp_secret_key_change_in_production"
+# Must match auth.py — read from environment
+SECRET_KEY = os.getenv("IBHA_JWT_SECRET", "ibha_ksp_secret_key_change_in_production")
 
 
 def verify_token(token: str) -> dict:

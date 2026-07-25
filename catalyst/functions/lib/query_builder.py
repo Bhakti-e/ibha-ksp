@@ -191,7 +191,7 @@ def build_hotspots_query(
             COUNT(CASE WHEN cm.GravityOffenceID = 1 THEN 1 END) AS heinous_count
         FROM CaseMaster cm
         JOIN Unit u ON cm.PoliceStationID = u.UnitID
-        WHERE cm.CrimeRegisteredDate >= CURRENT_DATE - INTERVAL '%s days'
+        WHERE cm.CrimeRegisteredDate >= CURRENT_DATE - (INTERVAL '1 day' * %s)
     """
     
     params = [days]
@@ -243,7 +243,7 @@ def build_trends_query(
     if user_claims.get("role") == "DSP":
         sql += " JOIN Unit u ON cm.PoliceStationID = u.UnitID"
     
-    sql += " WHERE cm.CrimeRegisteredDate >= CURRENT_DATE - INTERVAL '%s months'"
+    sql += " WHERE cm.CrimeRegisteredDate >= CURRENT_DATE - (INTERVAL '1 month' * %s)"
     
     params = [months]
     

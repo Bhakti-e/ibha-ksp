@@ -10,7 +10,6 @@ answer hash and citation list that are computed client-side.
 
 import json
 import hashlib
-import uuid
 from datetime import datetime
 from lib.logging_utils import log_info, log_error
 from lib import db

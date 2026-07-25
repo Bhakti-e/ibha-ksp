@@ -1,36 +1,26 @@
 # Ibha KSP — Python backend dependencies
-# Install with: pip install -r catalyst/requirements.txt
+# Install: pip install -r catalyst/requirements.txt
 
-# ── Catalyst SDK ───────────────────────────────────────
-zcatalyst-sdk==1.0.1        # Zoho Catalyst Python SDK (Zia, Data Store, etc.)
+# ── Catalyst SDK (production) ─────────────────────────────────────────────────
+zcatalyst-sdk==1.0.1
 
-# ── Core web/API ───────────────────────────────────────
+# ── Web framework ─────────────────────────────────────────────────────────────
 flask==3.0.3
 flask-cors==4.0.1
+
+# ── Database (local dev fallback) ─────────────────────────────────────────────
 psycopg2-binary==2.9.9
 
-# ── Pydantic v2 — request/response schemas, validation ─
+# ── Validation ────────────────────────────────────────────────────────────────
 pydantic==2.7.1
 
-# ── Utilities ──────────────────────────────────────────
-python-multipart==0.0.9     # multipart file uploads
-python-jose==3.3.0          # JWT (alternative to manual impl)
+# ── Utilities ─────────────────────────────────────────────────────────────────
+python-multipart==0.0.9
+python-jose==3.3.0
 
-# ── Optional: local OCR fallback (TrOCR) ───────────────
-# Only needed if Catalyst Zia OCR is unavailable (local dev without SDK).
-# Uncomment to enable the TrOCR fallback path in ocr_service.py:
-#
+# ── Optional: local OCR fallback (TrOCR) ─────────────────────────────────────
+# Uncomment only if Catalyst Zia OCR is not available in your environment.
 # transformers==4.41.2
 # Pillow==10.3.0
 # torch==2.3.0
-# torchvision==0.18.0
 # sentencepiece==0.2.0
-
-# ── Optional: semantic NLP / pgvector ──────────────────
-# Not used in current production paths; here for future RAG work:
-#
-# sentence-transformers==3.0.1
-# pgvector==0.3.1
-# llama-index==0.10.43
-# llama-index-core==0.10.43
-# llama-index-llms-huggingface==0.2.4

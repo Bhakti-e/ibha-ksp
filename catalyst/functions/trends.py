@@ -273,21 +273,19 @@ def _calc_change(station_id, days: int, user_claims: dict) -> float:
     if not station_id:
         return 0.0
     try:
-        sql = """
-            SELECT COUNT(*) AS cnt
-            FROM CaseMaster
+        sql_curr = """
+            SELECT COUNT(*) AS cnt FROM CaseMaster
             WHERE PoliceStationID = %s
-              AND CrimeRegisteredDate >= CURRENT_DATE - INTERVAL '%s days'
-        """ % ('%s', days)
-        prev_sql = """
-            SELECT COUNT(*) AS cnt
-            FROM CaseMaster
+              AND CrimeRegisteredDate >= CURRENT_DATE - (INTERVAL '1 day' * %s)
+        """
+        sql_prev = """
+            SELECT COUNT(*) AS cnt FROM CaseMaster
             WHERE PoliceStationID = %s
-              AND CrimeRegisteredDate >= CURRENT_DATE - INTERVAL '%s days'
-              AND CrimeRegisteredDate < CURRENT_DATE - INTERVAL '%s days'
-        """ % ('%s', days * 2, days)
-        curr = db.execute_query(sql, (station_id,))
-        prev = db.execute_query(prev_sql, (station_id,))
+              AND CrimeRegisteredDate >= CURRENT_DATE - (INTERVAL '1 day' * %s)
+              AND CrimeRegisteredDate <  CURRENT_DATE - (INTERVAL '1 day' * %s)
+        """
+        curr = db.execute_query(sql_curr, (station_id, days))
+        prev = db.execute_query(sql_prev, (station_id, days * 2, days))
         curr_n = curr[0]["cnt"] if curr else 0
         prev_n = prev[0]["cnt"] if prev else 0
         if prev_n == 0:
@@ -347,16 +345,16 @@ def handler_forecast(request):
             ct_extra = " AND csh.CrimeHeadName ILIKE %s"
             rls_params.append(f"%{crime_type}%")
 
-        sql = f"""
+        sql = """
             SELECT DATE_TRUNC('month', cm.CrimeRegisteredDate) AS month,
                    COUNT(*) AS case_count
             FROM CaseMaster cm
             LEFT JOIN Unit u ON cm.PoliceStationID = u.UnitID
             LEFT JOIN CrimeSubHead csh ON cm.CrimeMinorHeadID = csh.CrimeSubHeadID
-            WHERE cm.CrimeRegisteredDate >= CURRENT_DATE - INTERVAL '{months} months'
-            {rls_extra}{ct_extra}
-            GROUP BY 1 ORDER BY 1 ASC
+            WHERE cm.CrimeRegisteredDate >= CURRENT_DATE - (INTERVAL '1 month' * %s)
         """
+        sql += rls_extra + ct_extra + " GROUP BY 1 ORDER BY 1 ASC"
+        rls_params = [months] + rls_params
 
         rows = db.execute_query(sql, tuple(rls_params))
 
