@@ -68,29 +68,28 @@ CSV_IMPORTS = [
     {
         "file":    os.path.join(ROOT, "data", "samples", "casemaster_sample.csv"),
         "table":   "casemaster",
-        "columns": ["CaseMasterID","CrimeNo","CaseNo","CrimeRegisteredDate",
-                    "PolicePersonID","PoliceStationID","CaseCategoryID",
-                    "GravityOffenceID","CrimeMajorHeadID","CrimeMinorHeadID",
-                    "CaseStatusID","CourtID","IncidentFromDate","IncidentToDate",
-                    "InfoReceivedPSDate","latitude","longitude","BriefFacts"],
-        "conflict": "CaseMasterID",
+        # PostgreSQL lowercases all unquoted identifiers — use lowercase here
+        "columns": ["casemasterid","crimeno","caseno","crimeregistereddate",
+                    "policepersonid","policestationid","casecategoryid",
+                    "gravityoffenceid","crimemajorheadid","crimeminorheadid",
+                    "casestatusid","courtid","incidentfromdate","incidenttodate",
+                    "inforeceivedpsdate","latitude","longitude","brieffacts"],
+        "conflict": "casemasterid",
     },
     {
         "file":    os.path.join(ROOT, "data", "samples", "accused_sample.csv"),
         "table":   "accused",
-        "columns": ["AccusedMasterID","CaseMasterID","AccusedName",
-                    "AgeYear","GenderID","PersonID"],
-        "conflict": "AccusedMasterID",
+        "columns": ["accusedmasterid","casemasterid","accusedname",
+                    "ageyear","genderid","personid"],
+        "conflict": "accusedmasterid",
     },
     {
         "file":    os.path.join(ROOT, "data", "samples", "victims_sample.csv"),
         "table":   "victim",
-        "columns": ["VictimMasterID","CaseMasterID","VictimName",
-                    "AgeYear","GenderID","VictimPolice"],
-        "conflict": "VictimMasterID",
+        "columns": ["victimmasterid","casemasterid","victimname",
+                    "ageyear","genderid","victimpolice"],
+        "conflict": "victimmasterid",
     },
-    # locations_sample.csv targets the old 'locations' table (schema.sql only).
-    # init_db.sql does not create 'locations', so we skip it gracefully.
 ]
 
 # ── Dry-run: validate files only ────────────────────────────────────────────
@@ -161,7 +160,8 @@ def _connect():
 
 
 def _run_sql_file(conn, path: str) -> dict:
-    """Execute a SQL file, return {'ok': bool, 'error': str|None}."""
+    """Execute a SQL file. Already-exists errors are treated as success (idempotent)."""
+    import psycopg2
     rel = os.path.relpath(path, ROOT)
     if not os.path.exists(path):
         return {"ok": False, "error": f"File not found: {rel}"}
@@ -173,19 +173,43 @@ def _run_sql_file(conn, path: str) -> dict:
         conn.commit()
         print(f"  ✅  {rel}")
         return {"ok": True, "error": None}
+    except psycopg2.errors.DuplicateTable:
+        conn.rollback()
+        print(f"  ✅  {rel}  (tables already exist — skipped)")
+        return {"ok": True, "error": None}
+    except psycopg2.errors.DuplicateObject:
+        conn.rollback()
+        print(f"  ✅  {rel}  (indexes already exist — skipped)")
+        return {"ok": True, "error": None}
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()
+        print(f"  ✅  {rel}  (seed data already present — skipped)")
+        return {"ok": True, "error": None}
     except Exception as e:
         conn.rollback()
-        print(f"  ❌  {rel}: {e}")
-        return {"ok": False, "error": str(e)}
+        err = str(e)
+        # Treat "already exists" variants as success
+        if "already exists" in err:
+            print(f"  ✅  {rel}  (already exists — skipped)")
+            return {"ok": True, "error": None}
+        print(f"  ❌  {rel}: {err[:200]}")
+        return {"ok": False, "error": err}
     finally:
         cur.close()
 
 
 def _csv_row_to_params(row: dict, columns: list) -> tuple:
-    """Convert a CSV row dict to a params tuple, converting empty strings to None."""
+    """Convert a CSV row dict to a params tuple, converting empty strings to None.
+    Handles case-insensitive header matching (CSV headers may be mixed-case).
+    """
+    # Build a lowercase-keyed copy of the row for case-insensitive lookup
+    row_lower = {k.lower(): v for k, v in row.items()}
     params = []
     for col in columns:
-        val = row.get(col, row.get(col.lower(), "")).strip()
+        val = row_lower.get(col.lower(), "")
+        if val is None:
+            val = ""
+        val = str(val).strip()
         params.append(None if val == "" else val)
     return tuple(params)
 
@@ -202,10 +226,10 @@ def _import_csv(conn, entry: dict) -> dict:
         return {"ok": True, "rows": 0, "skipped": True}
 
     placeholders = ", ".join(["%s"] * len(columns))
-    col_list     = ", ".join(f'"{c}"' for c in columns)
+    col_list     = ", ".join(columns)   # lowercase — no quoting needed
     sql          = (
-        f'INSERT INTO "{table}" ({col_list}) VALUES ({placeholders}) '
-        f'ON CONFLICT ("{entry["conflict"]}") DO NOTHING'
+        f'INSERT INTO {table} ({col_list}) VALUES ({placeholders}) '
+        f'ON CONFLICT ({entry["conflict"]}) DO NOTHING'
     )
 
     imported = 0

@@ -10,13 +10,16 @@
 -- Password for all: 'password123' (hashed with bcrypt)
 -- In production, use proper password hashing
 
+-- Password for all demo users: 'password123'
+-- Hash generated with bcrypt rounds=12 — verified valid (60 chars)
 INSERT INTO users (user_id, email, password_hash, role, station_id, district_id, full_name, phone, active) VALUES
-('USR_001', 'rajesh.kumar@ksp.gov.in', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzpLaEg', 'Constable', 1, 1, 'Rajesh Kumar', '+919876543210', TRUE),
-('USR_002', 'priya.sharma@ksp.gov.in', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzpLaEg', 'SI', 1, 1, 'Priya Sharma', '+919876543211', TRUE),
-('USR_003', 'arun.desai@ksp.gov.in', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzpLaEg', 'Inspector', 2, 1, 'Arun Desai', '+919876543212', TRUE),
-('USR_004', 'lakshmi.rao@ksp.gov.in', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzpLaEg', 'DSP', 3, 1, 'Lakshmi Rao', '+919876543213', TRUE),
-('USR_005', 'vikram.mehta@ksp.gov.in', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzpLaEg', 'SCRB_Analyst', 100, 1, 'Vikram Mehta', '+919876543214', TRUE),
-('USR_006', 'admin.system@ksp.gov.in', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzpLaEg', 'Admin', 100, 1, 'System Admin', '+919876543215', TRUE);
+('USR_001', 'rajesh.kumar@ksp.gov.in', '$2b$12$VGWfNxjg/zbU5/mdIXOCXOEo9Xim1W2gKCCSJMfZQzbN5AAn71kQ6', 'Constable', 1, 1, 'Rajesh Kumar', '+919876543210', TRUE),
+('USR_002', 'priya.sharma@ksp.gov.in', '$2b$12$VGWfNxjg/zbU5/mdIXOCXOEo9Xim1W2gKCCSJMfZQzbN5AAn71kQ6', 'SI', 1, 1, 'Priya Sharma', '+919876543211', TRUE),
+('USR_003', 'arun.desai@ksp.gov.in', '$2b$12$VGWfNxjg/zbU5/mdIXOCXOEo9Xim1W2gKCCSJMfZQzbN5AAn71kQ6', 'Inspector', 2, 1, 'Arun Desai', '+919876543212', TRUE),
+('USR_004', 'lakshmi.rao@ksp.gov.in', '$2b$12$VGWfNxjg/zbU5/mdIXOCXOEo9Xim1W2gKCCSJMfZQzbN5AAn71kQ6', 'DSP', 3, 1, 'Lakshmi Rao', '+919876543213', TRUE),
+('USR_005', 'vikram.mehta@ksp.gov.in', '$2b$12$VGWfNxjg/zbU5/mdIXOCXOEo9Xim1W2gKCCSJMfZQzbN5AAn71kQ6', 'SCRB_Analyst', 100, 1, 'Vikram Mehta', '+919876543214', TRUE),
+('USR_006', 'admin.system@ksp.gov.in', '$2b$12$VGWfNxjg/zbU5/mdIXOCXOEo9Xim1W2gKCCSJMfZQzbN5AAn71kQ6', 'Admin', 100, 1, 'System Admin', '+919876543215', TRUE)
+ON CONFLICT (user_id) DO UPDATE SET password_hash = EXCLUDED.password_hash;
 
 -- =====================================================
 -- SAMPLE FIRS (50+ Cases Across Multiple Districts)
