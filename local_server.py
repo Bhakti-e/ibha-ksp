@@ -390,4 +390,11 @@ def _startup_banner():
 
 if __name__ == "__main__":
     _startup_banner()
-    app.run(host="0.0.0.0", port=8000, debug=True)
+
+    port = int(os.getenv("X_ZOHO_CATALYST_LISTEN_PORT", "8000"))
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False
+    )

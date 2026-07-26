@@ -1,0 +1,30 @@
+{
+  "defaults": {
+    "project": 1,
+    "env": 1
+  },
+  "actives": {
+    "project": 1,
+    "env": 1
+  },
+  "projects": [
+    {
+      "idx": 1,
+      "id": "52390000000020001",
+      "name": "Ibha-KSP",
+      "domain": {
+        "id": "50043872695",
+        "name": "ibha-ksp-60076570635.development"
+      },
+      "timezone": "Asia/Kolkata",
+      "env": [
+        {
+          "idx": 1,
+          "id": "60076570635",
+          "name": "Development",
+          "type": 3
+        }
+      ]
+    }
+  ]
+}
