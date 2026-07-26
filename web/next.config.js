@@ -2,11 +2,21 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Webpack configuration for external libraries
+  async rewrites() {
+    return [
+      {
+        source: "/api/v1/:path*",
+        destination: "http://127.0.0.1:8000/api/v1/:path*",
+      },
+    ];
+  },
+
   webpack: (config) => {
-    // Required for Leaflet (canvas) and Cytoscape (fs)
-    config.externals = [...(config.externals || []), { canvas: 'canvas' }];
-    config.resolve.fallback = { ...config.resolve.fallback, fs: false };
+    config.externals = [...(config.externals || []), { canvas: "canvas" }];
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+    };
     return config;
   },
 };

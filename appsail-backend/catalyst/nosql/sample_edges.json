@@ -1,0 +1,264 @@
+[
+  {
+    "edge_id": "EDGE_001",
+    "from_type": "Person",
+    "from_id": "ACC_001",
+    "to_type": "Person",
+    "to_id": "ACC_007",
+    "relation": "SAME_PERSON",
+    "strength": 1.0,
+    "ts": "2025-12-05T10:00:00Z",
+    "features": {
+      "shared_locations": ["Koramangala"],
+      "shared_mo": ["MO_BREAKING_ENTERING"],
+      "common_associates": []
+    },
+    "metadata": {
+      "data_source": "investigation",
+      "confidence": 1.0,
+      "note": "Ravi Kumar 'Chotu' identified in multiple cases"
+    }
+  },
+  {
+    "edge_id": "EDGE_002",
+    "from_type": "Person",
+    "from_id": "ACC_001",
+    "to_type": "Case",
+    "to_id": "FIR_001",
+    "relation": "LINKED_TO_CASE",
+    "strength": 0.95,
+    "ts": "2025-11-10T19:30:00Z",
+    "features": {},
+    "metadata": {
+      "data_source": "FIR",
+      "confidence": 0.95,
+      "role": "Primary offender"
+    }
+  },
+  {
+    "edge_id": "EDGE_003",
+    "from_type": "Person",
+    "from_id": "ACC_001",
+    "to_type": "Case",
+    "to_id": "FIR_007",
+    "relation": "LINKED_TO_CASE",
+    "strength": 0.95,
+    "ts": "2025-12-05T10:00:00Z",
+    "features": {},
+    "metadata": {
+      "data_source": "FIR",
+      "confidence": 0.95,
+      "role": "Primary offender"
+    }
+  },
+  {
+    "edge_id": "EDGE_004",
+    "from_type": "Person",
+    "from_id": "ACC_001",
+    "to_type": "Case",
+    "to_id": "FIR_011",
+    "relation": "LINKED_TO_CASE",
+    "strength": 0.92,
+    "ts": "2025-12-15T20:00:00Z",
+    "features": {},
+    "metadata": {
+      "data_source": "FIR",
+      "confidence": 0.92,
+      "role": "Primary offender"
+    }
+  },
+  {
+    "edge_id": "EDGE_005",
+    "from_type": "Case",
+    "from_id": "FIR_001",
+    "to_type": "Case",
+    "to_id": "FIR_007",
+    "relation": "SIMILAR_MO",
+    "strength": 0.88,
+    "ts": "2025-12-05T12:00:00Z",
+    "features": {
+      "shared_mo": ["MO_BREAKING_ENTERING", "MO_DUPLICATE_KEY"],
+      "temporal_proximity_days": 25,
+      "shared_locations": ["Koramangala"]
+    },
+    "metadata": {
+      "data_source": "inference",
+      "confidence": 0.88,
+      "note": "Pattern detected: Breaking and entering with duplicate keys"
+    }
+  },
+  {
+    "edge_id": "EDGE_006",
+    "from_type": "Case",
+    "from_id": "FIR_007",
+    "to_type": "Case",
+    "to_id": "FIR_011",
+    "relation": "SIMILAR_MO",
+    "strength": 0.91,
+    "ts": "2025-12-15T22:00:00Z",
+    "features": {
+      "shared_mo": ["MO_BREAKING_ENTERING", "MO_DUPLICATE_KEY"],
+      "temporal_proximity_days": 10,
+      "shared_locations": ["Koramangala"]
+    },
+    "metadata": {
+      "data_source": "inference",
+      "confidence": 0.91,
+      "note": "Crime series detected - same offender and MO"
+    }
+  },
+  {
+    "edge_id": "EDGE_007",
+    "from_type": "Person",
+    "from_id": "ACC_002",
+    "to_type": "Person",
+    "to_id": "ACC_011",
+    "relation": "SAME_PERSON",
+    "strength": 1.0,
+    "ts": "2025-12-18T09:00:00Z",
+    "features": {},
+    "metadata": {
+      "data_source": "investigation",
+      "confidence": 1.0,
+      "note": "Sanjay Reddy 'Sandy' - repeat two-wheeler thief"
+    }
+  },
+  {
+    "edge_id": "EDGE_008",
+    "from_type": "Person",
+    "from_id": "ACC_002",
+    "to_type": "Case",
+    "to_id": "FIR_002",
+    "relation": "LINKED_TO_CASE",
+    "strength": 0.93,
+    "ts": "2025-10-28T14:15:00Z",
+    "features": {},
+    "metadata": {
+      "data_source": "FIR",
+      "confidence": 0.93,
+      "role": "Primary offender"
+    }
+  },
+  {
+    "edge_id": "EDGE_009",
+    "from_type": "Person",
+    "from_id": "ACC_002",
+    "to_type": "Case",
+    "to_id": "FIR_012",
+    "relation": "LINKED_TO_CASE",
+    "strength": 0.89,
+    "ts": "2025-12-18T07:30:00Z",
+    "features": {},
+    "metadata": {
+      "data_source": "FIR",
+      "confidence": 0.89,
+      "role": "Primary offender"
+    }
+  },
+  {
+    "edge_id": "EDGE_010",
+    "from_type": "Case",
+    "from_id": "FIR_002",
+    "to_type": "Case",
+    "to_id": "FIR_012",
+    "relation": "SIMILAR_MO",
+    "strength": 0.86,
+    "ts": "2025-12-18T10:00:00Z",
+    "features": {
+      "shared_mo": ["MO_TWO_WHEELER_THEFT"],
+      "temporal_proximity_days": 51,
+      "common_associates": []
+    },
+    "metadata": {
+      "data_source": "inference",
+      "confidence": 0.86,
+      "note": "Same vehicle theft pattern"
+    }
+  },
+  {
+    "edge_id": "EDGE_011",
+    "from_type": "Person",
+    "from_id": "ACC_003",
+    "to_type": "Person",
+    "to_id": "ACC_004",
+    "relation": "CO_OFFENDER_WITH",
+    "strength": 0.94,
+    "ts": "2025-11-15T08:45:00Z",
+    "features": {
+      "shared_locations": ["Whitefield"],
+      "shared_mo": ["MO_STREET_ROBBERY"],
+      "phone_co_occurrence": 0,
+      "temporal_proximity_days": 0
+    },
+    "metadata": {
+      "data_source": "FIR",
+      "confidence": 0.94,
+      "note": "Both accused in FIR/2025/WHTFD/0012"
+    }
+  },
+  {
+    "edge_id": "EDGE_012",
+    "from_type": "Person",
+    "from_id": "ACC_003",
+    "to_type": "Case",
+    "to_id": "FIR_004",
+    "relation": "LINKED_TO_CASE",
+    "strength": 0.96,
+    "ts": "2025-11-15T08:45:00Z",
+    "features": {},
+    "metadata": {
+      "data_source": "FIR",
+      "confidence": 0.96,
+      "role": "Primary offender"
+    }
+  },
+  {
+    "edge_id": "EDGE_013",
+    "from_type": "Person",
+    "from_id": "ACC_004",
+    "to_type": "Case",
+    "to_id": "FIR_004",
+    "relation": "LINKED_TO_CASE",
+    "strength": 0.94,
+    "ts": "2025-11-15T08:45:00Z",
+    "features": {},
+    "metadata": {
+      "data_source": "FIR",
+      "confidence": 0.94,
+      "role": "Accomplice"
+    }
+  },
+  {
+    "edge_id": "EDGE_014",
+    "from_type": "Person",
+    "from_id": "ACC_001",
+    "to_type": "ModusOperandi",
+    "to_id": "MO_001",
+    "relation": "USED_MO",
+    "strength": 0.92,
+    "ts": "2025-12-15T20:00:00Z",
+    "features": {},
+    "metadata": {
+      "data_source": "investigation",
+      "confidence": 0.92,
+      "frequency": 3
+    }
+  },
+  {
+    "edge_id": "EDGE_015",
+    "from_type": "Case",
+    "from_id": "FIR_015",
+    "to_type": "Person",
+    "to_id": "ACC_012",
+    "relation": "LINKED_TO_CASE",
+    "strength": 0.97,
+    "ts": "2026-01-15T10:30:00Z",
+    "features": {},
+    "metadata": {
+      "data_source": "FIR",
+      "confidence": 0.97,
+      "role": "Dealer",
+      "note": "Drug trafficking case - potential network expansion"
+    }
+  }
+]

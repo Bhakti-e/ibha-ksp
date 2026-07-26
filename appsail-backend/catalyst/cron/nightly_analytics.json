@@ -1,0 +1,126 @@
+{
+  "cron_job_name": "Nightly Crime Analytics Update",
+  "description": "Pre-compute crime trends, hotspots, and anomaly scores for fast dashboard loading",
+  "version": "0.1.0",
+  
+  "schedule": {
+    "cron_expression": "0 2 * * *",
+    "timezone": "Asia/Kolkata",
+    "description": "Runs daily at 2:00 AM IST"
+  },
+  
+  "target_function": {
+    "name": "analytics_update",
+    "type": "serverless_function",
+    "path": "catalyst/functions/analytics_update.py",
+    "note": "TODO: Implement this function"
+  },
+  
+  "tasks": [
+    {
+      "task_id": "update_crime_trends",
+      "description": "Aggregate crime counts by district, station, type, and time bucket",
+      "operations": [
+        {
+          "type": "sql_query",
+          "query": "INSERT INTO crime_trends (id, district_id, station_id, crime_type, date_bucket, bucket_type, incident_count, computed_at) SELECT ...",
+          "note": "TODO: Write SQL aggregation queries for daily, weekly, monthly buckets"
+        }
+      ]
+    },
+    {
+      "task_id": "identify_hotspots",
+      "description": "Identify crime hotspots using density-based clustering (DBSCAN) on geo coordinates",
+      "operations": [
+        {
+          "type": "python_analysis",
+          "function": "compute_hotspots",
+          "input": {
+            "time_window_days": 30,
+            "min_incidents": 3,
+            "clustering_algorithm": "DBSCAN",
+            "epsilon_meters": 500
+          },
+          "note": "TODO: Implement hotspot detection using scikit-learn or similar"
+        }
+      ]
+    },
+    {
+      "task_id": "detect_anomalies",
+      "description": "Detect unusual crime patterns or spikes using time series anomaly detection",
+      "operations": [
+        {
+          "type": "python_analysis",
+          "function": "detect_anomalies",
+          "input": {
+            "time_window_days": 90,
+            "method": "isolation_forest",
+            "threshold": 0.05
+          },
+          "note": "TODO: Implement anomaly detection for early warning system"
+        }
+      ]
+    },
+    {
+      "task_id": "update_network_metrics",
+      "description": "Compute centrality scores and community detection for criminal networks",
+      "operations": [
+        {
+          "type": "graph_analysis",
+          "function": "compute_network_metrics",
+          "input": {
+            "source": "nosql_edges",
+            "metrics": ["degree_centrality", "betweenness_centrality", "community_detection"]
+          },
+          "note": "TODO: Implement graph analytics using NetworkX or igraph"
+        }
+      ]
+    },
+    {
+      "task_id": "predict_risk_scores",
+      "description": "Update risk scores for repeat offenders using recidivism prediction model",
+      "operations": [
+        {
+          "type": "ml_inference",
+          "function": "predict_recidivism",
+          "input": {
+            "model": "recidivism_prediction_model",
+            "features": ["previous_cases_count", "crime_types", "time_since_last_case", "age_range"]
+          },
+          "note": "TODO: Train and deploy recidivism prediction model (optional for MVP)"
+        }
+      ]
+    }
+  ],
+  
+  "monitoring": {
+    "success_notification": {
+      "enabled": false,
+      "recipients": []
+    },
+    "failure_notification": {
+      "enabled": true,
+      "recipients": ["admin.system@ksp.gov.in"],
+      "service": "Catalyst Mail"
+    },
+    "metrics": [
+      "execution_time_seconds",
+      "records_processed",
+      "errors_count"
+    ]
+  },
+  
+  "timeout_seconds": 3600,
+  "note": "Analytics job can run for up to 1 hour",
+  
+  "TODO": [
+    "Implement analytics_update serverless function",
+    "Write SQL aggregation queries for crime_trends table",
+    "Implement hotspot detection using DBSCAN",
+    "Implement anomaly detection using isolation forest or ARIMA",
+    "Implement graph analytics for criminal networks",
+    "Test cron job execution and monitoring",
+    "Add retry logic for failed tasks",
+    "Consider breaking into multiple smaller cron jobs if timeout is an issue"
+  ]
+}

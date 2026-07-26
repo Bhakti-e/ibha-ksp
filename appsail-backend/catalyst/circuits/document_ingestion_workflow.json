@@ -1,0 +1,206 @@
+{
+  "workflow_name": "Document Ingestion and Processing",
+  "description": "Automated workflow for processing uploaded documents through validation, OCR, and review stages",
+  "version": "0.1.0",
+  "trigger": {
+    "type": "signal",
+    "source": "documents_pending_insert",
+    "note": "Triggered when a new row is inserted into documents_pending table OR when a file is uploaded to Stratus bucket"
+  },
+  "steps": [
+    {
+      "step_id": "validate_file",
+      "type": "function",
+      "function_name": "validate_document",
+      "description": "Validate file type, size, and metadata",
+      "input": {
+        "document_id": "${trigger.document_id}",
+        "file_path": "${trigger.file_path}",
+        "metadata": "${trigger.metadata}"
+      },
+      "output": {
+        "is_valid": "boolean",
+        "validation_errors": "array"
+      },
+      "on_error": {
+        "action": "update_status",
+        "status": "REJECTED",
+        "reason": "Validation failed"
+      }
+    },
+    {
+      "step_id": "virus_scan",
+      "type": "function",
+      "function_name": "scan_document_for_virus",
+      "description": "Scan document for malware and viruses (optional, if antivirus service available)",
+      "input": {
+        "file_path": "${validate_file.output.file_path}"
+      },
+      "output": {
+        "is_clean": "boolean",
+        "scan_result": "string"
+      },
+      "on_error": {
+        "action": "update_status",
+        "status": "REJECTED",
+        "reason": "Virus scan failed or malware detected"
+      },
+      "note": "TODO: Integrate with antivirus service or skip if not available"
+    },
+    {
+      "step_id": "check_file_type",
+      "type": "condition",
+      "description": "Determine if OCR is needed based on file type",
+      "condition": "${validate_file.output.file_type} in ['image/png', 'image/jpeg', 'application/pdf']",
+      "if_true": "ocr_extraction",
+      "if_false": "text_extraction"
+    },
+    {
+      "step_id": "ocr_extraction",
+      "type": "function",
+      "function_name": "zia_ocr_extract_text",
+      "description": "Extract text from image or scanned PDF using Zia OCR",
+      "input": {
+        "file_path": "${validate_file.output.file_path}",
+        "language": "auto",
+        "output_format": "text"
+      },
+      "output": {
+        "extracted_text": "string",
+        "confidence": "number",
+        "language_detected": "string"
+      },
+      "on_success": {
+        "action": "update_documents_pending",
+        "fields": {
+          "text_content": "${ocr_extraction.output.extracted_text}",
+          "ocr_done": true,
+          "ocr_confidence": "${ocr_extraction.output.confidence}"
+        }
+      },
+      "on_error": {
+        "action": "log_error",
+        "message": "OCR extraction failed",
+        "continue": true
+      },
+      "note": "TODO: Call Zia OCR API via Catalyst SDK"
+    },
+    {
+      "step_id": "text_extraction",
+      "type": "function",
+      "function_name": "extract_text_from_document",
+      "description": "Extract text from PDF or DOCX without OCR",
+      "input": {
+        "file_path": "${validate_file.output.file_path}",
+        "file_type": "${validate_file.output.file_type}"
+      },
+      "output": {
+        "extracted_text": "string"
+      },
+      "on_success": {
+        "action": "update_documents_pending",
+        "fields": {
+          "text_content": "${text_extraction.output.extracted_text}",
+          "ocr_done": false
+        }
+      },
+      "on_error": {
+        "action": "log_error",
+        "message": "Text extraction failed",
+        "continue": true
+      },
+      "note": "TODO: Use libraries like PyPDF2, pdfplumber, or python-docx"
+    },
+    {
+      "step_id": "content_quality_check",
+      "type": "function",
+      "function_name": "check_content_quality",
+      "description": "Verify that extracted text is meaningful and not garbage",
+      "input": {
+        "text": "${check_file_type.output.extracted_text}",
+        "min_length": 50,
+        "check_readability": true
+      },
+      "output": {
+        "is_quality": "boolean",
+        "quality_score": "number",
+        "issues": "array"
+      },
+      "on_error": {
+        "action": "log_warning",
+        "message": "Low quality text extracted"
+      },
+      "note": "This helps catch OCR failures or corrupted files"
+    },
+    {
+      "step_id": "notify_reviewers",
+      "type": "function",
+      "function_name": "send_notification",
+      "description": "Notify SCRB analysts that a new document is pending review",
+      "input": {
+        "recipients": ["scrb_analysts@ksp.gov.in"],
+        "subject": "New Document Pending Review - ${trigger.document_id}",
+        "body": "A new document has been uploaded and processed. Please review at: https://ibha.ksp.gov.in/admin/ingestion",
+        "document_metadata": {
+          "document_id": "${trigger.document_id}",
+          "fir_number": "${trigger.fir_number}",
+          "station_id": "${trigger.station_id}",
+          "uploaded_by": "${trigger.uploaded_by}",
+          "sensitivity": "${trigger.sensitivity}"
+        }
+      },
+      "service": "Catalyst Mail",
+      "note": "TODO: Configure Catalyst Mail service with SCRB email group"
+    },
+    {
+      "step_id": "log_workflow_completion",
+      "type": "function",
+      "function_name": "log_ingestion_event",
+      "description": "Log workflow completion in ingestion_audit table",
+      "input": {
+        "document_id": "${trigger.document_id}",
+        "action": "PROCESSED",
+        "performed_by": "system_workflow",
+        "details": {
+          "ocr_done": "${check_file_type.output.ocr_done}",
+          "text_length": "${check_file_type.output.extracted_text.length}",
+          "quality_score": "${content_quality_check.output.quality_score}"
+        }
+      },
+      "note": "TODO: Insert into ingestion_audit table"
+    }
+  ],
+  "error_handling": {
+    "strategy": "log_and_notify",
+    "notification_recipients": ["admin.system@ksp.gov.in"],
+    "retry_policy": {
+      "max_retries": 3,
+      "retry_delay_seconds": 60,
+      "exponential_backoff": true
+    }
+  },
+  "monitoring": {
+    "metrics": [
+      "workflow_execution_time",
+      "ocr_success_rate",
+      "text_extraction_success_rate",
+      "document_rejection_rate"
+    ],
+    "alerts": [
+      {
+        "condition": "ocr_success_rate < 0.8",
+        "action": "notify_admin",
+        "message": "OCR success rate dropped below 80%"
+      }
+    ]
+  },
+  "TODO": [
+    "Implement all step functions as Catalyst Serverless Functions",
+    "Configure Zia OCR integration",
+    "Set up Catalyst Mail for notifications",
+    "Test workflow with sample documents (PDF, DOCX, images)",
+    "Add virus scanning if antivirus service is available",
+    "Configure Signals trigger for Data Store inserts",
+    "Test error handling and retry logic"
+  ]
+}

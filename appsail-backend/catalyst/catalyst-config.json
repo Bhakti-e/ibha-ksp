@@ -1,0 +1,87 @@
+{
+  "project_name": "ibha-ksp",
+  "project_type": "Advanced IO",
+  "description": "Ibha — KSP Crime Intelligence System",
+  "functions": [
+    {
+      "name": "ibha-api",
+      "type": "Advanced IO",
+      "runtime": "python3.9",
+      "memory": 256,
+      "timeout": 30,
+      "handler": "local_server.app",
+      "entry_file": "local_server.py",
+      "env_variables": {
+        "USE_CATALYST_DS": "true",
+        "IBHA_JWT_SECRET": "{{IBHA_JWT_SECRET}}"
+      }
+    }
+  ],
+  "data_store": {
+    "tables": [
+      "CaseMaster",
+      "Accused",
+      "Victim",
+      "Unit",
+      "District",
+      "State",
+      "Employee",
+      "CrimeHead",
+      "CrimeSubHead",
+      "CaseCategory",
+      "CaseStatusMaster",
+      "GravityOffence",
+      "Rank",
+      "Designation",
+      "UnitType",
+      "users",
+      "audit_logs",
+      "documents_pending",
+      "documents",
+      "ingestion_audit",
+      "crime_trends"
+    ],
+    "init_script": "catalyst/datastore/init_db.sql"
+  },
+  "web_client": {
+    "name": "ibha-web",
+    "framework": "nextjs",
+    "build_command": "npm run build",
+    "output_directory": ".next",
+    "root_directory": "web"
+  },
+  "stratus": {
+    "buckets": [
+      {
+        "name": "ibha-documents",
+        "path_prefix": "documents/",
+        "access": "private"
+      }
+    ]
+  },
+  "cron": [
+    {
+      "name": "nightly_indexing",
+      "schedule": "0 3 * * *",
+      "timezone": "Asia/Kolkata",
+      "function": "ingest_index.handler",
+      "description": "Batch-index approved documents into QuickML RAG"
+    },
+    {
+      "name": "nightly_analytics",
+      "schedule": "0 2 * * *",
+      "timezone": "Asia/Kolkata",
+      "function": "trends.handler",
+      "description": "Pre-compute crime trend aggregations"
+    }
+  ],
+  "environment_variables_required": [
+    "IBHA_JWT_SECRET",
+    "USE_CATALYST_DS"
+  ],
+  "notes": {
+    "quickml": "Configure Qwen 2.5 14B via Catalyst Console > QuickML before enabling RAG",
+    "auth": "Create Catalyst Auth application and set NEXT_PUBLIC_CATALYST_CLIENT_ID",
+    "zia_ocr": "Zia OCR is enabled automatically when zcatalyst_sdk is initialized in a Function environment"
+  }
+}

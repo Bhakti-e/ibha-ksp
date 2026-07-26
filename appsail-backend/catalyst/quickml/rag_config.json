@@ -1,0 +1,130 @@
+{
+  "rag_configuration": {
+    "name": "Ibha Crime Database RAG",
+    "description": "Retrieval-Augmented Generation for Karnataka State Police crime records",
+    "version": "0.1.0",
+    
+    "model": {
+      "name": "Qwen 2.5 14B Instruct",
+      "provider": "Catalyst QuickML",
+      "note": "This model is used for embeddings and context processing"
+    },
+    
+    "data_sources": [
+      {
+        "type": "datastore_table",
+        "table": "firs",
+        "fields": ["fir_number", "description", "modus_operandi", "crime_type", "location_name"],
+        "metadata_fields": ["station_id", "district_id", "sensitivity", "date_time", "status"]
+      },
+      {
+        "type": "datastore_table",
+        "table": "documents",
+        "fields": ["text_content"],
+        "metadata_fields": ["document_id", "fir_number", "station_id", "district_id", "sensitivity", "file_name"]
+      },
+      {
+        "type": "nosql_collection",
+        "collection": "Cases",
+        "fields": ["metadata.modus_operandi_tags"],
+        "metadata_fields": ["case_id", "station_id", "crime_type"]
+      }
+    ],
+    
+    "chunking": {
+      "strategy": "semantic",
+      "chunk_size": 512,
+      "chunk_overlap": 64,
+      "preserve_metadata": true,
+      "note": "Semantic chunking preserves context better than fixed-size chunking"
+    },
+    
+    "retrieval": {
+      "top_k": 5,
+      "similarity_threshold": 0.7,
+      "reranking": true,
+      "reranking_model": "cross-encoder-ms-marco",
+      "hybrid_search": {
+        "enabled": true,
+        "sparse_weight": 0.3,
+        "dense_weight": 0.7,
+        "note": "Hybrid search combines semantic and keyword matching"
+      }
+    },
+    
+    "filtering": {
+      "mandatory_filters": [
+        {
+          "field": "station_id",
+          "description": "RLS filter applied based on user role",
+          "runtime": true
+        },
+        {
+          "field": "district_id",
+          "description": "RLS filter for DSP role",
+          "runtime": true
+        },
+        {
+          "field": "sensitivity",
+          "description": "User clearance level filter",
+          "runtime": true
+        }
+      ],
+      "optional_filters": [
+        {
+          "field": "crime_type",
+          "description": "User-specified crime type filter"
+        },
+        {
+          "field": "date_time",
+          "description": "Temporal range filter"
+        }
+      ]
+    },
+    
+    "augmentation": {
+      "include_context": true,
+      "context_window": 256,
+      "include_citations": true,
+      "citation_format": "source_id + chunk_id + snippet",
+      "explainability": {
+        "enabled": true,
+        "include_similarity_scores": true,
+        "include_retrieval_path": true
+      }
+    },
+    
+    "security": {
+      "pii_masking": {
+        "enabled": true,
+        "mask_fields": ["names", "phone_numbers", "addresses"],
+        "masking_strategy": "partial"
+      },
+      "row_level_security": {
+        "enabled": true,
+        "enforce_on_retrieval": true,
+        "note": "RLS filters are applied BEFORE vector search for security"
+      }
+    },
+    
+    "indexing": {
+      "index_type": "HNSW",
+      "ef_construction": 200,
+      "M": 16,
+      "distance_metric": "cosine",
+      "batch_size": 100,
+      "update_strategy": "append_only",
+      "note": "Batch updates prevent continuous retraining. Index is updated nightly."
+    }
+  },
+  
+  "TODO": [
+    "Integrate with Data Store tables (firs, documents)",
+    "Implement RLS filtering at query time",
+    "Configure batch indexing via cron job",
+    "Add PII masking logic",
+    "Test retrieval quality with sample queries",
+    "Monitor chunk distribution and quality",
+    "Implement fallback for low-confidence results"
+  ]
+}

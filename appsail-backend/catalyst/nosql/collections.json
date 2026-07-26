@@ -1,0 +1,104 @@
+{
+  "collections": [
+    {
+      "name": "Persons",
+      "description": "Graph nodes representing persons (accused, victims, witnesses)",
+      "schema": {
+        "person_id": "string (primary key)",
+        "name": "string",
+        "aliases": ["string"],
+        "type": "string (accused, victim, witness)",
+        "known_addresses": ["string"],
+        "phone_numbers": ["string (hashed)"],
+        "associated_firs": ["string"],
+        "risk_score": "number (0-100)",
+        "last_activity_date": "timestamp",
+        "metadata": {
+          "age_range": "string",
+          "gender": "string",
+          "previous_cases_count": "number"
+        }
+      },
+      "indexes": ["person_id", "name", "type"]
+    },
+    {
+      "name": "Cases",
+      "description": "Graph nodes representing FIRs and investigations",
+      "schema": {
+        "case_id": "string (primary key, fir_id)",
+        "fir_number": "string",
+        "station_id": "string",
+        "district_id": "string",
+        "crime_type": "string",
+        "date_time": "timestamp",
+        "location": {
+          "lat": "number",
+          "lon": "number",
+          "name": "string"
+        },
+        "status": "string",
+        "connected_persons": ["string (person_ids)"],
+        "connected_cases": ["string (similar cases)"],
+        "metadata": {
+          "sensitivity": "string",
+          "modus_operandi_tags": ["string"]
+        }
+      },
+      "indexes": ["case_id", "fir_number", "station_id", "crime_type"]
+    },
+    {
+      "name": "Edges",
+      "description": "Graph edges representing relationships between entities",
+      "schema": {
+        "edge_id": "string (primary key)",
+        "from_type": "string (Person, Case, Location, MO)",
+        "from_id": "string",
+        "to_type": "string (Person, Case, Location, MO)",
+        "to_id": "string",
+        "relation": "string (CO_OFFENDER_WITH, LINKED_TO_CASE, USED_MO, AT_LOCATION, SIMILAR_TO)",
+        "strength": "number (0-1, edge weight)",
+        "ts": "timestamp (when relationship was identified)",
+        "features": {
+          "shared_locations": ["string"],
+          "shared_mo": ["string"],
+          "phone_co_occurrence": "number",
+          "temporal_proximity_days": "number",
+          "common_associates": ["string"]
+        },
+        "metadata": {
+          "data_source": "string (FIR, investigation, inference)",
+          "confidence": "number (0-1)"
+        }
+      },
+      "indexes": ["from_id", "to_id", "relation"]
+    },
+    {
+      "name": "ModusOperandi",
+      "description": "Catalog of crime methods and patterns",
+      "schema": {
+        "mo_id": "string (primary key)",
+        "name": "string",
+        "description": "string",
+        "crime_types": ["string"],
+        "frequency_count": "number",
+        "associated_persons": ["string (person_ids)"],
+        "associated_cases": ["string (case_ids)"],
+        "characteristics": {
+          "time_of_day_pattern": "string",
+          "location_type_pattern": "string",
+          "tools_used": ["string"],
+          "entry_method": "string"
+        }
+      },
+      "indexes": ["mo_id", "name", "crime_types"]
+    }
+  ],
+  "notes": [
+    "These NoSQL collections support graph analytics for criminal network analysis.",
+    "Edges can be visualized using Cytoscape.js on the frontend.",
+    "Link prediction algorithms can identify potential future connections.",
+    "TODO: Populate collections from Data Store FIRs using batch jobs.",
+    "TODO: Implement graph traversal queries for network expansion.",
+    "TODO: Add temporal analysis for evolving networks."
+  ]
+}

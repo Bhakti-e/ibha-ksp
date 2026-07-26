@@ -1,0 +1,173 @@
+{
+  "roles": [
+    {
+      "role_id": "constable",
+      "role_name": "Constable",
+      "description": "Police constable with access to own station data only",
+      "permissions": {
+        "endpoints": [
+          "/health",
+          "/chat",
+          "/audit"
+        ],
+        "data_scope": "station_level",
+        "features": [
+          "query_crime_data",
+          "view_firs",
+          "export_conversation_pdf"
+        ],
+        "restrictions": [
+          "Cannot upload documents",
+          "Cannot approve documents",
+          "Cannot access admin panel",
+          "Cannot view other stations' data"
+        ]
+      }
+    },
+    {
+      "role_id": "si",
+      "role_name": "SI (Sub-Inspector)",
+      "description": "Sub-Inspector with access to own station and nearby stations",
+      "permissions": {
+        "endpoints": [
+          "/health",
+          "/chat",
+          "/audit"
+        ],
+        "data_scope": "station_cluster",
+        "features": [
+          "query_crime_data",
+          "view_firs",
+          "view_network_analysis",
+          "export_conversation_pdf",
+          "view_nearby_stations"
+        ],
+        "restrictions": [
+          "Cannot upload documents",
+          "Cannot approve documents",
+          "Cannot access admin panel"
+        ]
+      },
+      "note": "In production, define 'nearby stations' based on geographic proximity or administrative grouping"
+    },
+    {
+      "role_id": "inspector",
+      "role_name": "Inspector",
+      "description": "Police Inspector with broader station access",
+      "permissions": {
+        "endpoints": [
+          "/health",
+          "/chat",
+          "/audit"
+        ],
+        "data_scope": "station_cluster",
+        "features": [
+          "query_crime_data",
+          "view_firs",
+          "view_network_analysis",
+          "view_trends_hotspots",
+          "export_conversation_pdf",
+          "view_nearby_stations"
+        ],
+        "restrictions": [
+          "Cannot upload documents",
+          "Cannot approve documents",
+          "Cannot access admin panel"
+        ]
+      }
+    },
+    {
+      "role_id": "dsp",
+      "role_name": "DSP (Deputy Superintendent of Police)",
+      "description": "DSP with district-wide access",
+      "permissions": {
+        "endpoints": [
+          "/health",
+          "/chat",
+          "/audit"
+        ],
+        "data_scope": "district_level",
+        "features": [
+          "query_crime_data",
+          "view_firs",
+          "view_network_analysis",
+          "view_trends_hotspots",
+          "view_predictive_analytics",
+          "export_conversation_pdf",
+          "view_district_dashboard"
+        ],
+        "restrictions": [
+          "Cannot upload documents",
+          "Cannot approve documents",
+          "Cannot access ingestion management"
+        ]
+      }
+    },
+    {
+      "role_id": "scrb_analyst",
+      "role_name": "SCRB_Analyst",
+      "description": "State Crime Records Bureau analyst with state-wide access and document management",
+      "permissions": {
+        "endpoints": [
+          "/health",
+          "/chat",
+          "/audit",
+          "/ingest/upload",
+          "/ingest/approve",
+          "/ingest/reject",
+          "/ingest/pending"
+        ],
+        "data_scope": "state_wide",
+        "features": [
+          "query_crime_data",
+          "view_firs",
+          "view_network_analysis",
+          "view_trends_hotspots",
+          "view_predictive_analytics",
+          "export_conversation_pdf",
+          "upload_documents",
+          "review_documents",
+          "approve_documents",
+          "reject_documents",
+          "view_ingestion_queue",
+          "view_state_dashboard",
+          "access_all_stations"
+        ],
+        "restrictions": [
+          "Cannot access full admin panel (user management, system config)"
+        ]
+      }
+    },
+    {
+      "role_id": "admin",
+      "role_name": "Admin",
+      "description": "System administrator with full access",
+      "permissions": {
+        "endpoints": [
+          "/*"
+        ],
+        "data_scope": "state_wide",
+        "features": [
+          "all_features",
+          "user_management",
+          "role_management",
+          "view_audit_logs",
+          "system_configuration",
+          "view_all_documents",
+          "manage_ingestion",
+          "access_admin_panel"
+        ],
+        "restrictions": []
+      }
+    }
+  ],
+  "notes": [
+    "Roles are hierarchical: Admin > SCRB_Analyst > DSP > Inspector > SI > Constable",
+    "Data scope determines RLS filtering in enforce_rls() function",
+    "Only SCRB_Analyst and Admin can manage document ingestion",
+    "Endpoints are protected by API Gateway with OAuth 2.0",
+    "TODO: Implement role-based UI rendering (hide features based on role)",
+    "TODO: Add role assignment workflow (Admin assigns roles to users)",
+    "TODO: Implement role-based notifications (e.g., only SCRB_Analyst gets ingestion notifications)"
+  ]
+}

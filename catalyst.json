@@ -1,7 +1,7 @@
 {
   "appsail": [
     {
-      "source": ".",
+      "source": "appsail-backend",
       "name": "ibha-ksp-backend"
     }
   ]
