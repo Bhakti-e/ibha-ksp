@@ -163,7 +163,16 @@ export function logout(): void {
 export function getCurrentUser() {
   if (typeof window === 'undefined') return null;
   const userData = localStorage.getItem('user_data');
-  return userData ? JSON.parse(userData) : null;
+  if (!userData || userData === "undefined" || userData === "null") {
+  return null;
+}
+
+try {
+  return JSON.parse(userData);
+} catch {
+  localStorage.removeItem("user");
+  return null;
+}
 }
 
 // ==================== Trends & Hotspots ====================
