@@ -38,7 +38,7 @@ const EXAMPLE_QUERIES = [
   'ಕಳೆದ 30 ದಿನಗಳಲ್ಲಿ ಕಳ್ಳತನದ ಪ್ರಕರಣಗಳನ್ನು ತೋರಿಸಿ',
 ];
 
-const API_BASE = process.env.NEXT_PUBLIC_CATALYST_API_BASE_URL ?? 'http://localhost:8000/api/v1';
+const API_BASE = process.env.NEXT_PUBLIC_CATALYST_API_BASE_URL ?? '/api/v1';
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
