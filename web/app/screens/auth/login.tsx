@@ -22,10 +22,21 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      const res = await login({ email, password });
-      localStorage.setItem('auth_token', res.token);
-      localStorage.setItem('user_data',  JSON.stringify(res.user));
-      router.push('/chat');
+const res = await login({ email, password });
+
+if (!res?.token || !res?.user) {
+  throw new Error(
+    'Login failed because the server returned incomplete authentication data.'
+  );
+}
+
+localStorage.removeItem('auth_token');
+localStorage.removeItem('user_data');
+
+localStorage.setItem('auth_token', res.token);
+localStorage.setItem('user_data', JSON.stringify(res.user));
+
+router.replace('/chat');
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {

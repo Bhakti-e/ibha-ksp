@@ -33,10 +33,20 @@ apiClient.interceptors.request.use(
   (config) => {
     // Get token from localStorage
     // TODO: Replace with proper Catalyst Auth integration
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+const token = localStorage.getItem('auth_token');
+
+if (
+  token &&
+  token !== 'undefined' &&
+  token !== 'null' &&
+  token.trim() !== ''
+) {
+  config.headers.Authorization = `Bearer ${token}`;
+} else {
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('user_data');
+  delete config.headers.Authorization;
+}
     return config;
   },
   (error) => {
@@ -148,10 +158,62 @@ export interface LoginResponse {
   };
 }
 
-export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
-  // Real login call to backend auth endpoint
-  const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
-  return response.data;
+function unwrapLoginResponse(value: unknown): LoginResponse | null {
+  let current: any = value;
+
+  for (let i = 0; i < 5; i++) {
+    if (typeof current === 'string') {
+      try {
+        current = JSON.parse(current);
+        continue;
+      } catch {
+        return null;
+      }
+    }
+
+    if (current?.token && current?.user) {
+      return current as LoginResponse;
+    }
+
+    // Handle Axios/backend wrappers such as:
+    // { data: { token, user } }
+    if (current?.data !== undefined) {
+      current = current.data;
+      continue;
+    }
+
+    // Handle Catalyst-style wrappers such as:
+    // { statusCode: 200, body: "{...}" }
+    if (current?.body !== undefined) {
+      current = current.body;
+      continue;
+    }
+
+    break;
+  }
+
+  return null;
+}
+
+export async function login(
+  credentials: LoginCredentials
+): Promise<LoginResponse> {
+  const response = await apiClient.post<unknown>(
+    '/auth/login',
+    credentials
+  );
+
+  const loginData = unwrapLoginResponse(response.data);
+
+  if (!loginData?.token || !loginData?.user) {
+    console.error('Unexpected login response:', response.data);
+
+    throw new Error(
+      'The login server did not return an authentication token.'
+    );
+  }
+
+  return loginData;
 }
 
 export function logout(): void {
