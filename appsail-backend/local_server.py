@@ -132,15 +132,24 @@ def make_req(flask_req, path_params=None):
 
 
 def send(catalyst_response):
-    """Unwrap a Catalyst-style response dict into a Flask response tuple."""
+    """Convert a Catalyst-style response into a Flask response without losing its body."""
     status = catalyst_response.get("statusCode", 200)
-    body   = catalyst_response.get("body", "{}")
-    if isinstance(body, str):
-        try:
-            body = json.loads(body)
-        except Exception:
-            pass
-    return jsonify(body), status
+    body = catalyst_response.get("body", "{}")
+    headers = catalyst_response.get("headers", {})
+
+    if not isinstance(body, str):
+        body = json.dumps(body)
+
+    response = app.response_class(
+        response=body,
+        status=status,
+        mimetype="application/json",
+    )
+
+    for key, value in headers.items():
+        response.headers[key] = value
+
+    return response
 
 
 # ── Health ──────────────────────────────────────────────────────────────────
