@@ -1,8 +1,17 @@
 {
 	"command": "python3 -u local_server.py",
 	"build_path": "./",
-	"stack": "python_3_11",
-	"env_variables": {},
+	"stack": "python_3_13",
+	"env_variables": {
+		"DB_HOST": "ep-square-queen-azfj7ad6-pooler.c-3.ap-southeast-1.aws.neon.tech",
+		"DB_PORT": "5432",
+		"DB_NAME": "neondb",
+		"DB_USER": "neondb_owner",
+		"DB_PASSWORD": "npg_wIiRTMVH30uS",
+		"DB_SSLMODE": "require",
+		"USE_CATALYST_DS": "false",
+		"IBHA_JWT_SECRET": "ibha_dev_secret_change_before_production"
+	},
 	"memory": 256,
 	"scripts": {}
 }
