@@ -66,6 +66,21 @@ const apiClient = axios.create({
   timeout: 30000,
 });
 
+// Attach the stored bearer token to every outgoing request.
+apiClient.interceptors.request.use(
+  (config) => {
+    if (isBrowser()) {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (isUsableToken(token)) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+
 // Add the saved bearer token to protected requests.
 apiClient.interceptors.response.use(
   (response) => response,
