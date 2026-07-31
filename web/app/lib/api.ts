@@ -81,41 +81,19 @@ apiClient.interceptors.request.use(
 );
 
 
-// Add the saved bearer token to protected requests.
+// ── Response interceptor: on 401 clear auth and redirect, except for login ──
 apiClient.interceptors.response.use(
   (response) => response,
-
   (error: AxiosError<ApiError>) => {
-    const status = error.response?.status;
+    const status     = error.response?.status;
     const requestUrl = error.config?.url ?? '';
+    const isLoginRequest = requestUrl.includes('/auth/login');
 
-    const isLoginRequest =
-      requestUrl.includes('/auth/login');
-
-    if (
-      status === 401 &&
-      !isLoginRequest &&
-      isBrowser()
-    ) {
+    if (status === 401 && !isLoginRequest && isBrowser()) {
       clearStoredAuthentication();
-
       if (window.location.pathname !== '/login') {
-        window.location.replace(
-          `/login?reason=session_expired`
-        );
+        window.location.replace('/login?reason=session_expired');
       }
-    }
-
-    return Promise.reject(error);
-  }
-);
-// Handle expired, missing, or rejected authentication.
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError<ApiError>) => {
-    if (error.response?.status === 401) {
-      clearStoredAuthentication();
-      redirectToLogin();
     }
 
     return Promise.reject(error);

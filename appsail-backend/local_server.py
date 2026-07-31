@@ -88,30 +88,8 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 
-CORS(
-    app,
-    resources={r"/*": {"origins": [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000"
-    ]}},
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
-    supports_credentials=False,
-)
-
-@app.after_request
-def add_cors_headers(response):
-    origin = request.headers.get("Origin")
-
-    if origin in [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000"
-    ]:
-        response.headers["Access-Control-Allow-Origin"] = origin
-
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    return response
+# Allow all origins — the Next.js rewrite proxy handles edge security.
+CORS(app)
 
 
 def make_req(flask_req, path_params=None):
