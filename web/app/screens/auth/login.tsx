@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+
 import {
   login,
   saveAuthentication,
@@ -48,25 +49,50 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const normalizedEmail = email.trim().toLowerCase();
-
-      const response = await login({
-        email: normalizedEmail,
+      const credentials = {
+        email: email.trim().toLowerCase(),
         password,
-      });
+      };
 
-      saveAuthentication(response);
+      const authentication = await login(credentials);
 
-      router.replace('/chat');
-      router.refresh();
+      saveAuthentication(authentication);
+
+      const savedToken =
+        localStorage.getItem('auth_token');
+
+      const savedUser =
+        localStorage.getItem('user_data');
+
+      if (
+        !savedToken ||
+        savedToken === 'undefined' ||
+        savedToken === 'null' ||
+        !savedUser ||
+        savedUser === 'undefined' ||
+        savedUser === 'null'
+      ) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+
+        throw new Error(
+          'Authentication could not be saved in the browser.'
+        );
+      }
+
+      window.location.replace('/chat');
     } catch (err) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_data');
+
       setError(getErrorMessage(err));
-    } finally {
       setLoading(false);
     }
   };
 
-  const fillDemoCredentials = (demoEmail: string) => {
+  const fillDemoCredentials = (
+    demoEmail: string
+  ) => {
     setEmail(demoEmail);
     setPassword('password123');
     setError('');
@@ -75,7 +101,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        {/* Header — institutional branding */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-5">
             <div className="w-14 h-14 bg-navy rounded-lg flex items-center justify-center shadow-panel">
@@ -99,7 +124,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Form card */}
         <div className="card p-6 shadow-panel">
           <h2 className="text-base font-semibold text-ink mb-5">
             Officer Sign In
@@ -120,8 +144,8 @@ export default function LoginPage() {
           >
             <div>
               <label
-                className="block text-sm font-medium text-ink mb-1"
                 htmlFor="email"
+                className="block text-sm font-medium text-ink mb-1"
               >
                 Email address
               </label>
@@ -145,8 +169,8 @@ export default function LoginPage() {
 
             <div>
               <label
-                className="block text-sm font-medium text-ink mb-1"
                 htmlFor="password"
+                className="block text-sm font-medium text-ink mb-1"
               >
                 Password
               </label>
@@ -187,7 +211,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo credentials */}
           <div className="mt-5 pt-4 border-t border-slate-100">
             <p className="text-2xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
               Demo accounts — click to fill

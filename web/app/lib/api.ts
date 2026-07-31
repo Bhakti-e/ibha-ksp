@@ -67,29 +67,33 @@ const apiClient = axios.create({
 });
 
 // Add the saved bearer token to protected requests.
-apiClient.interceptors.request.use(
-  (config) => {
-    if (!isBrowser()) {
-      return config;
-    }
+apiClient.interceptors.response.use(
+  (response) => response,
 
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  (error: AxiosError<ApiError>) => {
+    const status = error.response?.status;
+    const requestUrl = error.config?.url ?? '';
 
-    if (isUsableToken(token)) {
-      config.headers.Authorization = `Bearer ${token}`;
-    } else {
+    const isLoginRequest =
+      requestUrl.includes('/auth/login');
+
+    if (
+      status === 401 &&
+      !isLoginRequest &&
+      isBrowser()
+    ) {
       clearStoredAuthentication();
 
-      if (config.headers) {
-        delete config.headers.Authorization;
+      if (window.location.pathname !== '/login') {
+        window.location.replace(
+          `/login?reason=session_expired`
+        );
       }
     }
 
-    return config;
-  },
-  (error) => Promise.reject(error)
+    return Promise.reject(error);
+  }
 );
-
 // Handle expired, missing, or rejected authentication.
 apiClient.interceptors.response.use(
   (response) => response,
