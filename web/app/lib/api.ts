@@ -320,11 +320,29 @@ export async function login(
     credentials
   );
 
+  const raw = response.data as Record<string, unknown>;
+
+  // Fast path: backend returns {token, user} directly — proven by live test.
+  const directToken = raw?.token ?? raw?.access_token ?? raw?.auth_token;
+  const directUser  = raw?.user  ?? raw?.user_data;
+  if (
+    typeof directToken === 'string' &&
+    isUsableToken(directToken) &&
+    directUser &&
+    typeof directUser === 'object'
+  ) {
+    return {
+      token: directToken,
+      user:  directUser as AuthenticatedUser,
+    };
+  }
+
+  // Fallback: try deep-unwrap for any proxy/wrapper envelope.
   const loginData = unwrapLoginResponse(response.data);
 
   if (!loginData) {
-    console.error('Unexpected login response:', response.data);
-
+    // Log the full raw response so we can see what shape was received.
+    console.error('[login] Raw response.data:', JSON.stringify(response.data));
     throw new Error(
       'Login failed because the server did not return a valid authentication token.'
     );
